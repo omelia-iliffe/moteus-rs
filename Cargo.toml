@@ -11,3 +11,5 @@ serial2 = "0.2.19"
 fdcanusb = {path = '../fdcanusb-rs'}
 byteorder = "1.5.0"
 zerocopy = { version = "0.7.32", features = ["derive"] }
+num-traits = "0.2.18"
+num-derive = "0.4.2"

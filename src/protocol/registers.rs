@@ -1,6 +1,7 @@
 
 use zerocopy::AsBytes;
-#[derive(Debug, Clone, Copy)]
+use num_derive::FromPrimitive;
+#[derive(Debug, Clone, Copy, FromPrimitive, PartialEq, Eq, AsBytes)]
 #[repr(u8)]
 pub enum FrameRegisters {
     WriteInt8 = 0x00,
@@ -12,16 +13,102 @@ pub enum FrameRegisters {
     ReadInt16 = 0x14,
     ReadInt32 = 0x18,
     ReadF32 = 0x1c,
-    ReplyBase = 0x20,
+    // ReplyBase = 0x20,
+    ReplyInt8 = 0x20,
+    ReplyInt16 = 0x24,
+    ReplyInt32 = 0x28,
+    ReplyF32 = 0x2c,
     WriteError = 0x30,
     ReadError = 0x31,
     StreamClientData = 0x40,
     StreamServerData = 0x41,
     StreamClientPoll = 0x42,
-    NOP = 0x50,
+    Nop = 0x50,
 }
 
-#[derive(Debug, Clone, Copy, AsBytes)]
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum Data {
+    Int8(i8),
+    Int16(i16),
+    Int32(i32),
+    F32(f32),
+    None,
+}
+impl Data {
+    pub fn is_none(&self) -> bool {
+        matches!(self, Data::None)
+    }
+    pub fn as_bytes(&self) -> Vec<u8> {
+        match self {
+            Data::Int8(value) => value.to_le_bytes().to_vec(),
+            Data::Int16(value) => value.to_le_bytes().to_vec(),
+            Data::Int32(value) => value.to_le_bytes().to_vec(),
+            Data::F32(value) => value.to_le_bytes().to_vec(),
+            Data::None => vec![],
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct InvalidDataType;
+impl From<i8> for Data {
+    fn from(value: i8) -> Self {
+        Data::Int8(value)
+    }
+}
+impl From<i16> for Data {
+    fn from(value: i16) -> Self {
+        Data::Int16(value)
+    }
+}
+impl From<i32> for Data {
+    fn from(value: i32) -> Self {
+        Data::Int32(value)
+    }
+}
+impl From<f32> for Data {
+    fn from(value: f32) -> Self {
+        Data::F32(value)
+    }
+}
+impl TryFrom<Data> for i8 {
+    type Error = InvalidDataType;
+    fn try_from(value: Data) -> Result<Self, Self::Error> {
+        match value {
+            Data::Int8(value) => Ok(value),
+            _ => Err(InvalidDataType),
+        }
+    }
+}
+impl TryFrom<Data> for i16 {
+    type Error = InvalidDataType;
+    fn try_from(value: Data) -> Result<Self, Self::Error> {
+        match value {
+            Data::Int16(value) => Ok(value),
+            _ => Err(InvalidDataType),
+        }
+    }
+}
+impl TryFrom<Data> for i32 {
+    type Error = InvalidDataType;
+    fn try_from(value: Data) -> Result<Self, Self::Error> {
+        match value {
+            Data::Int32(value) => Ok(value),
+            _ => Err(InvalidDataType),
+        }
+    }
+}
+impl TryFrom<Data> for f32 {
+    type Error = InvalidDataType;
+    fn try_from(value: Data) -> Result<Self, Self::Error> {
+        match value {
+            Data::F32(value) => Ok(value),
+            _ => Err(InvalidDataType),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, AsBytes, FromPrimitive, PartialEq, Eq)]
 #[repr(u16)]
 pub enum Register {
     Mode = 0x000,
@@ -128,7 +215,7 @@ pub enum Register {
     DriverFault2 = 0x141,
 }
 
-#[derive(Debug, Clone, Copy, AsBytes)]
+#[derive(Debug, Clone, Copy, AsBytes, FromPrimitive)]
 #[repr(u8)]
 pub enum Mode {
     Stopped = 0,
@@ -149,6 +236,7 @@ pub enum Mode {
     Brake = 15,
 }
 
+#[derive(Debug, Clone, Copy, AsBytes, FromPrimitive)]
 #[repr(u8)]
 pub enum HomeState {
     Relative = 0,
