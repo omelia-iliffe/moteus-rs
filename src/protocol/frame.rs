@@ -1,6 +1,7 @@
 use num_traits::FromPrimitive;
 use crate::protocol::registers::{Data, FrameRegisters};
 use crate::{Register, Mode};
+use crate::protocol::Resolution;
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum FrameError {
@@ -14,6 +15,7 @@ pub enum FrameParseError {
     SubFrameLength,
     Register
 }
+#[derive(Debug, PartialEq)]
 pub struct SubFrame {
     register: FrameRegisters,
     len: u8,
@@ -65,45 +67,67 @@ impl SubFrame {
         Ok(buf)
     }
 
-    pub fn from_bytes(buf: &[u8]) -> Result<Self, FrameParseError> {
-        let frame_register = FrameRegisters::from_u8(buf[0] & (0xFF - 0x03)).ok_or(FrameParseError::SubFrameRegister)?;
+    pub fn from_bytes(buf: &[u8]) -> Result<(Self, usize), FrameParseError> {
 
-        let (len_offset, len) = { //get len either from bits or the next byte (increments index)
-            match buf[0] & 0x03 {
-                0 => {
-                    (1, buf[1]) //index = 1
-                },
-                l => (0,l)
+            let frame_register = FrameRegisters::from_u8(buf[0] & (0xFF - 0x03)).ok_or(FrameParseError::SubFrameRegister)?;
+
+            let (len_offset, len) = { //get len either from bits or the next byte (increments index)
+                match buf[0] & 0x03 {
+                    0 => {
+                        (1, buf[1]) //index = 1
+                    },
+                    l => (0, l)
+                }
+            };
+            let initial_reg = buf[1 + len_offset];
+            let index_step = match frame_register {
+                FrameRegisters::ReplyInt8 => 1,
+                FrameRegisters::ReplyInt16 => 2,
+                FrameRegisters::ReplyInt32 | FrameRegisters::ReplyF32 => 4,
+                _ => return Err(FrameParseError::SubFrameRegister)
+            };
+
+            let start = 2 + len_offset;
+            let end = (len as usize * index_step) + 2 + len_offset;
+            let data = {
+                let mut data = Vec::new();
+                for (reg_index, i) in (start..end).step_by(index_step).enumerate() {
+                    let value = match frame_register {
+                        FrameRegisters::ReplyInt8 => Data::Int8(i8::from_le_bytes(buf[i..i + index_step].try_into().unwrap())),
+                        FrameRegisters::ReplyInt16 => Data::Int16(i16::from_le_bytes(buf[i..i + index_step].try_into().unwrap())),
+                        FrameRegisters::ReplyInt32 => Data::Int32(i32::from_le_bytes(buf[i..i + index_step].try_into().unwrap())),
+                        FrameRegisters::ReplyF32 => Data::F32(f32::from_le_bytes(buf[i..i + index_step].try_into().unwrap())),
+                        _ => return Err(FrameParseError::SubFrameRegister)
+                    };
+                    data.push((Register::from_u8(initial_reg + reg_index as u8).ok_or(FrameParseError::SubFrameRegister)?, value));
+                }
+                data
+            };
+
+            Ok((Self {
+                register: frame_register,
+                len,
+                data
+            }, end))
+    }
+}
+
+pub struct Frame(Vec<(Register, Data)>);
+
+impl Frame {
+    pub fn from_bytes(buf: &[u8]) -> Result<Frame, FrameParseError> {
+        let mut results = Vec::new();
+        let mut buf = buf;
+        loop {
+            let (subframe, offset) = SubFrame::from_bytes(buf)?;
+            // let len = subframe.len as usize;
+            results.extend(subframe.data);
+            buf = &buf[offset..];
+            if buf.is_empty() {
+                break;
             }
-        };
-        let initial_reg = buf[1+len_offset];
-        let index_step = match frame_register {
-            FrameRegisters::ReplyInt8 => 1,
-            FrameRegisters::ReplyInt16 => 2,
-            FrameRegisters::ReplyInt32 | FrameRegisters::ReplyF32 => 4,
-            _ => return Err(FrameParseError::SubFrameRegister)
-        };
-
-        let data = {
-            let mut data = Vec::new();
-            for (reg_index, i) in (2+len_offset..=(len as usize*index_step)+1+len_offset).step_by(index_step).enumerate() {
-                let value  = match frame_register {
-                    FrameRegisters::ReplyInt8 => Data::Int8(i8::from_le_bytes(buf[i..i+index_step].try_into().unwrap())),
-                    FrameRegisters::ReplyInt16 => Data::Int16(i16::from_le_bytes(buf[i..i+index_step].try_into().unwrap())),
-                    FrameRegisters::ReplyInt32 => Data::Int32(i32::from_le_bytes(buf[i..i+index_step].try_into().unwrap())),
-                    FrameRegisters::ReplyF32 => Data::F32(f32::from_le_bytes(buf[i..i+index_step].try_into().unwrap())),
-                    _ => return Err(FrameParseError::SubFrameRegister)
-                };
-                data.push((Register::from_u8(initial_reg + reg_index as u8).ok_or(FrameParseError::SubFrameRegister)?, value));
-            }
-            data
-        };
-
-        Ok(Self {
-            register: frame_register,
-            len,
-            data
-        })
+        }
+        Ok(Frame(results))
     }
 }
 
@@ -169,7 +193,7 @@ mod tests {
     fn parse_u8_subframe() {
         // 2404000a005000000170ff230d181400
         let buf = vec![0x23, 0x0d, 0x18, 0x14, 0x00];
-        let subframe = SubFrame::from_bytes(&buf).unwrap();
+        let (subframe, _) = SubFrame::from_bytes(&buf).unwrap();
 
         assert_eq!(subframe.register, FrameRegisters::ReplyInt8);
         assert_eq!(subframe.len, 3);
@@ -183,7 +207,7 @@ mod tests {
     fn parse_u16_subframe() {
         // 2404000a005000000170ff230d181400
         let buf = vec![0x24, 0x04, 0x00, 0x0a, 0x00, 0x50, 0x00, 0x00, 0x01, 0x70, 0xff]; // , 0x23, 0x0d, 0x18, 0x14, 0x00];
-        let subframe = SubFrame::from_bytes(&buf).unwrap();
+        let (subframe, _) = SubFrame::from_bytes(&buf).unwrap();
 
         assert_eq!(subframe.register, FrameRegisters::ReplyInt16);
         assert_eq!(subframe.len, 4);
@@ -192,6 +216,21 @@ mod tests {
             (Register::Position, Data::Int16(80)),
             (Register::Velocity, Data::Int16(256)),
             (Register::Torque, Data::Int16(-144)),
+        ]);
+    }
+    #[test]
+    fn parse_multiple_subframes() {
+        let buf = vec![0x24, 0x04, 0x00, 0x0a, 0x00, 0x50, 0x00, 0x00, 0x01, 0x70, 0xff, 0x23, 0x0d, 0x18, 0x14, 0x00];
+        let frame = Frame::from_bytes(&buf).unwrap();
+
+        assert_eq!(frame.0, vec![
+            (Register::Mode, Data::Int16(10)),
+            (Register::Position, Data::Int16(80)),
+            (Register::Velocity, Data::Int16(256)),
+            (Register::Torque, Data::Int16(-144)),
+            (Register::Voltage, Data::Int8(24)),
+            (Register::Temperature, Data::Int8(20)),
+            (Register::Fault, Data::Int8(0)),
         ]);
     }
 }
