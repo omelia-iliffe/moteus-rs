@@ -1,5 +1,5 @@
 use crate::protocol::registers::FrameRegisters;
-use crate::{Mode, Register};
+use crate::{Register};
 
 #[derive(Debug, PartialEq, Eq)]
 enum FrameError {
@@ -52,7 +52,7 @@ impl<T> SubFrame<T>
         // write registers, takes into account unneeded sequential registers
         let first_register = self.data.first().ok_or(FrameError::EmptySubFrame)?.0 as u8; //TODO: SHOULD NOT BE U8
         buf.push(first_register);
-        self.data.iter().map(|(reg, value)| value).flatten().for_each(| value| {
+        self.data.iter().map(|(_reg, value)| value).flatten().for_each(| value| {
             buf.extend_from_slice(value.as_bytes());
         });
 
@@ -76,7 +76,7 @@ mod tests {
 
     #[test]
     fn test_empty_subframe() {
-        let mut subframe: SubFrame<u8> = SubFrame::new(FrameRegisters::WRITE_INT8, 1);
+        let subframe: SubFrame<u8> = SubFrame::new(FrameRegisters::WRITE_INT8, 1);
         let bytes = subframe.as_bytes();
 
         assert_eq!(bytes, Err(FrameError::EmptySubFrame));
@@ -90,7 +90,7 @@ mod tests {
         subframe.add_write(Register::kCommandVelocity, 0x0120).unwrap();
         subframe.add_write(Register::kCommandFeedforwardTorque, 0xff50).unwrap();
 
-        let mut bytes = subframe.as_bytes().unwrap();
+        let bytes = subframe.as_bytes().unwrap();
         assert_eq!(bytes, vec![0x07, 0x20, 0x60, 0x00, 0x20, 0x01, 0x50, 0xff]);
     }
 
