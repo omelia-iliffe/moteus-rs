@@ -2,17 +2,14 @@ use crate::protocol::{Frame, FrameBuilder};
 use crate::registers::RegisterData;
 use crate::{registers, Resolution};
 
-
 #[derive(Debug, Default, Clone)]
 pub struct Stop;
 
 impl From<Stop> for FrameBuilder {
     fn from(_: Stop) -> FrameBuilder {
-        Frame::builder()
-            .add([registers::Mode::write(registers::Modes::Stopped).into()])
+        Frame::builder().add([registers::Mode::write(registers::Modes::Stopped).into()])
     }
 }
-
 
 #[derive(Debug, Default, Clone)]
 pub struct Position {
@@ -27,7 +24,6 @@ pub struct Position {
     pub velocity_limit: Option<registers::VelocityLimit>,
     pub acceleration_limit: Option<registers::AccelerationLimit>,
     pub fixed_voltage_override: Option<registers::FixedVoltage>,
-
     // todo: add query override
 }
 
@@ -133,7 +129,9 @@ impl Default for Query {
             // rezero_state: None,
             home_state: None,
             voltage: Some(registers::Voltage::read_with_resolution(Resolution::Int8)),
-            temperature: Some(registers::Temperature::read_with_resolution(Resolution::Int8)),
+            temperature: Some(registers::Temperature::read_with_resolution(
+                Resolution::Int8,
+            )),
             fault: Some(registers::Fault::read_with_resolution(Resolution::Int8)),
             aux1_gpio: None,
             aux2_gpio: None,

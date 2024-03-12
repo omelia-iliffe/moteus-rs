@@ -1,10 +1,12 @@
+use std::collections::HashMap;
+
+use fdcanusb::CanFdFrame;
+use itertools::Itertools;
+use num_traits::FromPrimitive;
+
 use crate::protocol::registers::{FrameRegisters, RegisterDataStruct, RegisterError};
 use crate::registers::{Register, RegisterAddr};
 use crate::Resolution;
-use fdcanusb::CanFdFrame;
-use num_traits::FromPrimitive;
-use std::collections::{HashMap};
-use itertools::Itertools;
 
 #[derive(Debug, PartialEq)]
 pub enum FrameError {
@@ -77,11 +79,9 @@ impl SubFrame {
         let first_reg = self.data.first().ok_or(FrameError::EmptySubFrame)?;
         buf.extend(first_reg.address.address_as_bytes());
         if first_reg.data.is_some() {
-            self.data
-                .iter()
-                .for_each(|reg| {
-                    buf.extend_from_slice(reg.clone().data.unwrap().as_slice()); //TODO: remove extra clone
-                });
+            self.data.iter().for_each(|reg| {
+                buf.extend_from_slice(reg.clone().data.unwrap().as_slice()); //TODO: remove extra clone
+            });
         }
 
         Ok(buf)
@@ -114,12 +114,14 @@ impl SubFrame {
             format!("Expected a Reply FrameRegister, got {:?}", frame_register),
         ))?;
 
-
         let start = 2 + len_offset;
         let end = {
             match frame_register {
-                FrameRegisters::ReadInt8 | FrameRegisters::ReadInt16 | FrameRegisters::ReadInt32 | FrameRegisters::ReadF32 => start,
-                _ => (len as usize * index_step) + 2 + len_offset
+                FrameRegisters::ReadInt8
+                | FrameRegisters::ReadInt16
+                | FrameRegisters::ReadInt32
+                | FrameRegisters::ReadF32 => start,
+                _ => (len as usize * index_step) + 2 + len_offset,
             }
         };
         let data = {
@@ -131,13 +133,13 @@ impl SubFrame {
                     format!("Expected a Reply FrameRegister, got {:?}", frame_register),
                 ))?;
 
-
-                let reg = RegisterDataStruct::from_bytes(reg_addr, &buf[i..i + index_step], res).map_err(|e| {
-                    std::io::Error::new(
-                        std::io::ErrorKind::InvalidData,
-                        format!("Unable to parse register from {}: {:?}", reg_addr, e),
-                    )
-                })?;
+                let reg = RegisterDataStruct::from_bytes(reg_addr, &buf[i..i + index_step], res)
+                    .map_err(|e| {
+                        std::io::Error::new(
+                            std::io::ErrorKind::InvalidData,
+                            format!("Unable to parse register from {}: {:?}", reg_addr, e),
+                        )
+                    })?;
                 data.push(reg);
                 //
                 // let value = match frame_register {
@@ -208,8 +210,7 @@ impl ResponseFrame {
         Ok(ResponseFrame(results))
     }
 
-    pub fn get<R: Register>(&self) -> Option<R>
-    {
+    pub fn get<R: Register>(&self) -> Option<R> {
         let register = R::address();
         self.0
             .iter()
@@ -259,7 +260,10 @@ pub struct FrameBuilder {
 }
 
 impl FrameBuilder {
-    pub fn add<R>(self, registers: R) -> Self where R: IntoIterator<Item=RegisterDataStruct> {
+    pub fn add<R>(self, registers: R) -> Self
+    where
+        R: IntoIterator<Item = RegisterDataStruct>,
+    {
         let new = FrameBuilder::from(registers);
         self.merge(new)
     }
@@ -275,7 +279,10 @@ impl FrameBuilder {
             (Resolution::Int32, false) => FrameRegisters::WriteInt32,
             (Resolution::Float, false) => FrameRegisters::WriteF32,
         };
-        self.registers.entry(r).or_default().insert(reg.address, reg);
+        self.registers
+            .entry(r)
+            .or_default()
+            .insert(reg.address, reg);
         self
     }
 
@@ -325,11 +332,13 @@ impl FrameBuilder {
     }
 }
 
-impl<R> From<R> for FrameBuilder where R: IntoIterator<Item=RegisterDataStruct> {
+impl<R> From<R> for FrameBuilder
+where
+    R: IntoIterator<Item = RegisterDataStruct>,
+{
     fn from(registers: R) -> Self {
-        let registers: HashMap<FrameRegisters, HashMap<RegisterAddr, RegisterDataStruct>> = registers
-            .into_iter()
-            .fold(HashMap::new(), |mut acc, reg| {
+        let registers: HashMap<FrameRegisters, HashMap<RegisterAddr, RegisterDataStruct>> =
+            registers.into_iter().fold(HashMap::new(), |mut acc, reg| {
                 let r = match (reg.resolution, reg.data.is_none()) {
                     (Resolution::Int8, true) => FrameRegisters::ReadInt8,
                     (Resolution::Int16, true) => FrameRegisters::ReadInt16,
@@ -344,9 +353,7 @@ impl<R> From<R> for FrameBuilder where R: IntoIterator<Item=RegisterDataStruct> 
 
                 acc
             });
-        FrameBuilder {
-            registers
-        }
+        FrameBuilder { registers }
     }
 }
 //
@@ -395,9 +402,9 @@ impl<R> From<R> for FrameBuilder where R: IntoIterator<Item=RegisterDataStruct> 
 
 #[cfg(test)]
 mod tests {
-    use crate::protocol::{registers};
-    use crate::registers::{Faults, RegisterData};
     use super::*;
+    use crate::protocol::registers;
+    use crate::registers::{Faults, RegisterData};
 
     #[test]
     fn test_write_u8_subframe() {
@@ -423,13 +430,16 @@ mod tests {
         // let mut subframes = Vec::new();
         let mut subframe: SubFrame = SubFrame::new(FrameRegisters::WriteInt16, 3);
         subframe
-            .add(registers::CommandPosition::write_with_resolution(2.0, Resolution::Int16).into())//RegisterAddr::CommandPosition, 0x0060i16)
+            .add(registers::CommandPosition::write_with_resolution(2.0, Resolution::Int16).into()) //RegisterAddr::CommandPosition, 0x0060i16)
             .unwrap();
         subframe
-            .add(registers::CommandVelocity::write_with_resolution(2.0, Resolution::Int16).into())//RegisterAddr::CommandPosition, 0x0060i16)
+            .add(registers::CommandVelocity::write_with_resolution(2.0, Resolution::Int16).into()) //RegisterAddr::CommandPosition, 0x0060i16)
             .unwrap();
         subframe
-            .add(registers::CommandFeedforwardTorque::write_with_resolution(2.0, Resolution::Int16).into())//RegisterAddr::CommandPosition, 0x0060i16)
+            .add(
+                registers::CommandFeedforwardTorque::write_with_resolution(2.0, Resolution::Int16)
+                    .into(),
+            ) //RegisterAddr::CommandPosition, 0x0060i16)
             .unwrap();
 
         let bytes = subframe.as_bytes().unwrap();
@@ -448,7 +458,9 @@ mod tests {
     #[test]
     fn test_read_u16_subframe() {
         let mut subframe = SubFrame::new(FrameRegisters::ReadInt16, 4);
-        subframe.add(registers::Mode::read_with_resolution(Resolution::Int16).into()).unwrap();
+        subframe
+            .add(registers::Mode::read_with_resolution(Resolution::Int16).into())
+            .unwrap();
         let bytes = subframe.as_bytes();
 
         assert_eq!(bytes, Ok(vec![0x14, 0x04, 0x00]));
@@ -457,7 +469,9 @@ mod tests {
     #[test]
     fn test_read_u32_subframe() {
         let mut subframe = SubFrame::new(FrameRegisters::ReadInt32, 5);
-        subframe.add(registers::MillisecondCounter::read().into()).unwrap();
+        subframe
+            .add(registers::MillisecondCounter::read().into())
+            .unwrap();
         let bytes = subframe.as_bytes();
 
         assert_eq!(bytes, Ok(vec![0x18, 0x05, 0x70]));
@@ -484,9 +498,7 @@ mod tests {
     #[test]
     fn parse_u16_subframe() {
         // 2404000a005000000170ff230d181400
-        let buf = vec![
-            0x24, 0x04, 0x00, 0x0a, 0x00, 100, 0x00, 144, 0x01, 192, 199,
-        ]; // , 0x23, 0x0d, 0x18, 0x14, 0x00];
+        let buf = vec![0x24, 0x04, 0x00, 0x0a, 0x00, 100, 0x00, 144, 0x01, 192, 199]; // , 0x23, 0x0d, 0x18, 0x14, 0x00];
         let (subframe, _) = SubFrame::from_bytes(&buf).unwrap();
         let subframe = subframe.unwrap();
         assert_eq!(subframe.register, FrameRegisters::ReplyInt16);
@@ -498,7 +510,11 @@ mod tests {
                 // (RegisterAddr::Position, Data::Int16(80)),
                 // (RegisterAddr::Velocity, Data::Int16(256)),
                 // (RegisterAddr::Torque, Data::Int16(-144)),
-                registers::Mode::write_with_resolution(registers::Modes::Position, Resolution::Int16).into(),
+                registers::Mode::write_with_resolution(
+                    registers::Modes::Position,
+                    Resolution::Int16
+                )
+                .into(),
                 registers::Position::write_with_resolution(0.01, Resolution::Int16).into(),
                 registers::Velocity::write_with_resolution(0.1, Resolution::Int16).into(),
                 registers::Torque::write_with_resolution(-144.0, Resolution::Int16).into(),
@@ -510,7 +526,8 @@ mod tests {
     fn parse_multiple_subframes() {
         let frame = SubFrame::from_bytes(&[0x01, 0x00, 0x0a]).unwrap();
         dbg!(&frame);
-        let frame = SubFrame::from_bytes(&[0x0d, 0x20, 0x00, 0x00, 0xc0, 0x7f, 0x50, 0x50, 0x50, ]).unwrap();
+        let frame =
+            SubFrame::from_bytes(&[0x0d, 0x20, 0x00, 0x00, 0xc0, 0x7f, 0x50, 0x50, 0x50]).unwrap();
         dbg!(&frame);
         // assert_eq!(
         //     frame.0,
@@ -530,19 +547,18 @@ mod tests {
     #[test]
     fn multi_subframes_into_bytes() {
         let frame: Frame = Frame::builder()
-            .add(
-                [
-                    // (RegisterAddr::CommandPosition, Data::Int16(0x0060)),
-                    // (RegisterAddr::CommandVelocity, Data::Int16(0x0120)),
-                    // (RegisterAddr::CommandFeedforwardTorque, Data::Int16(-144)),
-                    registers::CommandPosition::write_with_resolution(1.0, Resolution::Int16).into(),
-                    registers::CommandVelocity::write_with_resolution(0.0, Resolution::Int16).into(),
-                    registers::CommandFeedforwardTorque::write_with_resolution(-2.0, Resolution::Int16).into(),
-                    registers::Voltage::read_with_resolution(Resolution::Int8).into(),
-                    registers::Temperature::read_with_resolution(Resolution::Int8).into(),
-                    registers::Fault::read_with_resolution(Resolution::Int8).into(),
-                ]
-            )
+            .add([
+                // (RegisterAddr::CommandPosition, Data::Int16(0x0060)),
+                // (RegisterAddr::CommandVelocity, Data::Int16(0x0120)),
+                // (RegisterAddr::CommandFeedforwardTorque, Data::Int16(-144)),
+                registers::CommandPosition::write_with_resolution(1.0, Resolution::Int16).into(),
+                registers::CommandVelocity::write_with_resolution(0.0, Resolution::Int16).into(),
+                registers::CommandFeedforwardTorque::write_with_resolution(-2.0, Resolution::Int16)
+                    .into(),
+                registers::Voltage::read_with_resolution(Resolution::Int8).into(),
+                registers::Temperature::read_with_resolution(Resolution::Int8).into(),
+                registers::Fault::read_with_resolution(Resolution::Int8).into(),
+            ])
             .build();
         let bytes = frame.as_bytes();
         assert_eq!(

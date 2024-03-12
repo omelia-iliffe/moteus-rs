@@ -1,13 +1,13 @@
-/// Based on the Python example [Trajectory Test] from the moteus library
-///
-///
-/// Demonstrates how to specify alternate registers to query, and how
-/// to control the velocity and acceleration limits on a per-command basis
-/// to create a continuous trajectory.
-///
-use moteus::{Controller, registers};
+//! Based on the Python example [Trajectory Test] from the moteus library
+//!
+//!
+//! Demonstrates how to specify alternate registers to query, and how
+//! to control the velocity and acceleration limits on a per-command basis
+//! to create a continuous trajectory.
+//!
 use moteus::frame::{Query, QueryType};
 use moteus::registers::*;
+use moteus::{registers, Controller};
 
 mod _logging;
 
@@ -58,9 +58,11 @@ fn main() {
             ..Default::default()
         };
 
-
         // Print out everything.
-        let state = c.send(1, command, QueryType::Default).unwrap().expect("No response");
+        let state = c
+            .send(1, command, QueryType::Default)
+            .unwrap()
+            .expect("No response");
         // Print out just the position register.
         log::debug!("{:?}", state);
         log::info!("Position: {:?}\n", state.get::<registers::Position>());

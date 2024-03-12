@@ -1,17 +1,18 @@
-use crate::{int_rw_register, map_rw_register};
-use crate::Resolution;
 use byteorder::{ReadBytesExt, LE};
 use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
 use zerocopy::AsBytes;
 
+use crate::{int_rw_register, map_rw_register, Resolution};
+
 pub trait Register {
     fn address() -> RegisterAddr;
-    fn from_bytes(bytes: &[u8], resolution: Resolution) -> Result<Self, RegisterError> where Self: Sized;
+    fn from_bytes(bytes: &[u8], resolution: Resolution) -> Result<Self, RegisterError>
+    where
+        Self: Sized;
 }
 
-pub trait RegisterData<T>
-{
+pub trait RegisterData<T> {
     const DEFAULT_RESOLUTION: Resolution;
     fn write(data: T) -> Self;
     fn write_with_resolution(data: T, r: Resolution) -> Self;
@@ -32,7 +33,11 @@ impl RegisterDataStruct {
         R::from_bytes(bytes, self.resolution)
     }
 
-    pub(crate) fn from_bytes(addr: u16, bytes: &[u8], resolution: Resolution) -> Result<RegisterDataStruct, RegisterError> {
+    pub(crate) fn from_bytes(
+        addr: u16,
+        bytes: &[u8],
+        resolution: Resolution,
+    ) -> Result<RegisterDataStruct, RegisterError> {
         Ok(RegisterDataStruct {
             address: RegisterAddr::from_u16(addr).ok_or(RegisterError::InvalidAddress)?,
             resolution,
@@ -78,19 +83,18 @@ trait TryIntoBytes {
 
 trait TryFromBytes {
     fn try_from_1_byte(byte: u8, mapping: Option<Map>) -> Result<Self, RegisterError>
-        where
-            Self: Sized;
+    where
+        Self: Sized;
     fn try_from_2_bytes(bytes: &[u8], mapping: Option<Map>) -> Result<Self, RegisterError>
-        where
-            Self: Sized;
+    where
+        Self: Sized;
     fn try_from_4_bytes(bytes: &[u8], mapping: Option<Map>) -> Result<Self, RegisterError>
-        where
-            Self: Sized;
+    where
+        Self: Sized;
     fn try_from_f32_bytes(bytes: &[u8], mapping: Option<Map>) -> Result<Self, RegisterError>
-        where
-            Self: Sized;
+    where
+        Self: Sized;
 }
-
 
 pub type Map = (f32, f32, f32);
 
@@ -133,10 +137,18 @@ pub enum FrameRegisters {
 impl FrameRegisters {
     pub fn resolution(&self) -> Option<Resolution> {
         let r = match self {
-            FrameRegisters::WriteInt8 | FrameRegisters::ReadInt8 | FrameRegisters::ReplyInt8 => Resolution::Int8,
-            FrameRegisters::WriteInt16 | FrameRegisters::ReadInt16 | FrameRegisters::ReplyInt16 => Resolution::Int16,
-            FrameRegisters::WriteInt32 | FrameRegisters::ReadInt32 | FrameRegisters::ReplyInt32 => Resolution::Int32,
-            FrameRegisters::WriteF32 | FrameRegisters::ReadF32 | FrameRegisters::ReplyF32 => Resolution::Float,
+            FrameRegisters::WriteInt8 | FrameRegisters::ReadInt8 | FrameRegisters::ReplyInt8 => {
+                Resolution::Int8
+            }
+            FrameRegisters::WriteInt16 | FrameRegisters::ReadInt16 | FrameRegisters::ReplyInt16 => {
+                Resolution::Int16
+            }
+            FrameRegisters::WriteInt32 | FrameRegisters::ReadInt32 | FrameRegisters::ReplyInt32 => {
+                Resolution::Int32
+            }
+            FrameRegisters::WriteF32 | FrameRegisters::ReadF32 | FrameRegisters::ReplyF32 => {
+                Resolution::Float
+            }
             _ => return None,
         };
         Some(r)
@@ -488,17 +500,23 @@ impl TryFromBytes for i32 {
     }
     fn try_from_2_bytes(bytes: &[u8], _: Option<Map>) -> Result<Self, RegisterError> {
         let mut rdr = std::io::Cursor::new(bytes);
-        let value = rdr.read_i16::<LE>().map_err(|e| RegisterError::IO(format!("{:?}", e)))?;
+        let value = rdr
+            .read_i16::<LE>()
+            .map_err(|e| RegisterError::IO(format!("{:?}", e)))?;
         Ok(value as i32)
     }
     fn try_from_4_bytes(bytes: &[u8], _: Option<Map>) -> Result<Self, RegisterError> {
         let mut rdr = std::io::Cursor::new(bytes);
-        let value = rdr.read_i32::<LE>().map_err(|e| RegisterError::IO(format!("{:?}", e)))?;
+        let value = rdr
+            .read_i32::<LE>()
+            .map_err(|e| RegisterError::IO(format!("{:?}", e)))?;
         Ok(value)
     }
     fn try_from_f32_bytes(bytes: &[u8], _: Option<Map>) -> Result<Self, RegisterError> {
         let mut rdr = std::io::Cursor::new(bytes);
-        let value = rdr.read_f32::<LE>().map_err(|e| RegisterError::IO(format!("{:?}", e)))?;
+        let value = rdr
+            .read_f32::<LE>()
+            .map_err(|e| RegisterError::IO(format!("{:?}", e)))?;
         Ok(value as i32)
     }
 }
@@ -534,12 +552,16 @@ impl TryFromBytes for u32 {
     }
     fn try_from_2_bytes(bytes: &[u8], _: Option<Map>) -> Result<Self, RegisterError> {
         let mut rdr = std::io::Cursor::new(bytes);
-        let value = rdr.read_i16::<LE>().map_err(|e| RegisterError::IO(format!("{:?}", e)))?;
+        let value = rdr
+            .read_i16::<LE>()
+            .map_err(|e| RegisterError::IO(format!("{:?}", e)))?;
         Ok(value as u32)
     }
     fn try_from_4_bytes(bytes: &[u8], _: Option<Map>) -> Result<Self, RegisterError> {
         let mut rdr = std::io::Cursor::new(bytes);
-        let value = rdr.read_i32::<LE>().map_err(|e| RegisterError::IO(format!("{:?}", e)))?;
+        let value = rdr
+            .read_i32::<LE>()
+            .map_err(|e| RegisterError::IO(format!("{:?}", e)))?;
         Ok(value as u32)
     }
     fn try_from_f32_bytes(_bytes: &[u8], _: Option<Map>) -> Result<Self, RegisterError> {
@@ -606,7 +628,9 @@ impl TryFromBytes for f32 {
             return Err(RegisterError::NoMapping);
         };
         let mut rdr = std::io::Cursor::new(bytes);
-        let value = rdr.read_i16::<LE>().map_err(|e| RegisterError::IO(format!("{:?}", e)))?;
+        let value = rdr
+            .read_i16::<LE>()
+            .map_err(|e| RegisterError::IO(format!("{:?}", e)))?;
         let value = {
             if value == i16::MIN {
                 f32::NAN
@@ -621,7 +645,9 @@ impl TryFromBytes for f32 {
             return Err(RegisterError::NoMapping);
         };
         let mut rdr = std::io::Cursor::new(bytes);
-        let value = rdr.read_i32::<LE>().map_err(|e| RegisterError::IO(format!("{:?}", e)))?;
+        let value = rdr
+            .read_i32::<LE>()
+            .map_err(|e| RegisterError::IO(format!("{:?}", e)))?;
         let value = {
             if value == i32::MIN {
                 f32::NAN
@@ -636,7 +662,9 @@ impl TryFromBytes for f32 {
         //     return Err(RegisterError::NoMapping);
         // };
         let mut rdr = std::io::Cursor::new(bytes);
-        let value = rdr.read_f32::<LE>().map_err(|e| RegisterError::IO(format!("{:?}", e)))?;
+        let value = rdr
+            .read_f32::<LE>()
+            .map_err(|e| RegisterError::IO(format!("{:?}", e)))?;
         Ok(value)
     }
 }
@@ -760,7 +788,6 @@ impl TryFromBytes for Faults {
     }
 }
 
-
 #[derive(Debug, Clone, Copy, AsBytes, FromPrimitive, PartialEq, Eq)]
 #[repr(u8)]
 pub enum HomeStates {
@@ -817,11 +844,17 @@ mod tests {
 
         let data = Position::write_with_resolution(2.0, Resolution::Int8).as_bytes();
         assert!(data.is_err()); // OVERFLOW
-        let data = Position::write_with_resolution(2.0, Resolution::Int16).as_bytes().unwrap();
+        let data = Position::write_with_resolution(2.0, Resolution::Int16)
+            .as_bytes()
+            .unwrap();
         assert_eq!(data, (20000i16.to_le_bytes().to_vec()));
-        let data = Position::write_with_resolution(2.0, Resolution::Int32).as_bytes().unwrap();
+        let data = Position::write_with_resolution(2.0, Resolution::Int32)
+            .as_bytes()
+            .unwrap();
         assert_eq!(data, (200000i32.to_le_bytes().to_vec()));
-        let data = Position::write_with_resolution(2.0, Resolution::Float).as_bytes().unwrap();
+        let data = Position::write_with_resolution(2.0, Resolution::Float)
+            .as_bytes()
+            .unwrap();
         assert_eq!(data, (2.0f32.to_le_bytes().to_vec()));
 
         let position = Position::write(-2.0);
@@ -832,23 +865,35 @@ mod tests {
 
         let data = Position::write_with_resolution(-2.0, Resolution::Int8).as_bytes();
         assert!(data.is_err()); // OVERFLOW
-        let data = Position::write_with_resolution(-2.0, Resolution::Int16).as_bytes().unwrap();
+        let data = Position::write_with_resolution(-2.0, Resolution::Int16)
+            .as_bytes()
+            .unwrap();
         assert_eq!(data, ((-20000i16).to_le_bytes().to_vec()));
-        let data = Position::write_with_resolution(-2.0, Resolution::Int32).as_bytes().unwrap();
+        let data = Position::write_with_resolution(-2.0, Resolution::Int32)
+            .as_bytes()
+            .unwrap();
         assert_eq!(data, ((-200000i32).to_le_bytes().to_vec()));
-        let data = Position::write_with_resolution(-2.0, Resolution::Float).as_bytes().unwrap();
+        let data = Position::write_with_resolution(-2.0, Resolution::Float)
+            .as_bytes()
+            .unwrap();
         assert_eq!(data, ((-2.0f32).to_le_bytes().to_vec()));
     }
 
     #[test]
     fn test_u8_register() {
-        let data = Mode::write_with_resolution(Modes::Voltage, Resolution::Int8).as_bytes().unwrap();
+        let data = Mode::write_with_resolution(Modes::Voltage, Resolution::Int8)
+            .as_bytes()
+            .unwrap();
         assert_eq!(data, (vec![6]));
         let data = Mode::from_bytes(&data, Resolution::Int8).unwrap();
         assert_eq!(data, (Mode::write(Modes::Voltage)));
-        let data = Mode::write_with_resolution(Modes::Voltage, Resolution::Int16).as_bytes().unwrap();
+        let data = Mode::write_with_resolution(Modes::Voltage, Resolution::Int16)
+            .as_bytes()
+            .unwrap();
         assert_eq!(data, ([6, 0].to_vec()));
-        let data = Mode::write_with_resolution(Modes::Voltage, Resolution::Int32).as_bytes().unwrap();
+        let data = Mode::write_with_resolution(Modes::Voltage, Resolution::Int32)
+            .as_bytes()
+            .unwrap();
         assert_eq!(data, ([6, 0, 0, 0].to_vec()));
         let data = Mode::write_with_resolution(Modes::Voltage, Resolution::Float).as_bytes();
         assert!(data.is_err()); // IntAsFloat
@@ -856,11 +901,17 @@ mod tests {
 
     #[test]
     fn test_i32_register() {
-        let data = MillisecondCounter::write_with_resolution(1, Resolution::Int8).as_bytes().unwrap();
+        let data = MillisecondCounter::write_with_resolution(1, Resolution::Int8)
+            .as_bytes()
+            .unwrap();
         assert_eq!(data, vec!(1));
-        let data = MillisecondCounter::write_with_resolution(1, Resolution::Int16).as_bytes().unwrap();
+        let data = MillisecondCounter::write_with_resolution(1, Resolution::Int16)
+            .as_bytes()
+            .unwrap();
         assert_eq!(data, vec!(1, 0));
-        let data = MillisecondCounter::write_with_resolution(1, Resolution::Int32).as_bytes().unwrap();
+        let data = MillisecondCounter::write_with_resolution(1, Resolution::Int32)
+            .as_bytes()
+            .unwrap();
         assert_eq!(data, vec!(1, 0, 0, 0));
         let data = MillisecondCounter::write_with_resolution(1, Resolution::Float).as_bytes();
         assert!(data.is_err());
@@ -871,21 +922,45 @@ mod tests {
 
     #[test]
     fn test_f32_nan() {
-        let data = Position::write_with_resolution(f32::NAN, Resolution::Float).as_bytes().unwrap();
+        let data = Position::write_with_resolution(f32::NAN, Resolution::Float)
+            .as_bytes()
+            .unwrap();
         assert_eq!(data, vec!(0, 0, 192, 127));
-        assert!(Position::from_bytes(&data, Resolution::Float).unwrap().value.unwrap().is_nan());
+        assert!(Position::from_bytes(&data, Resolution::Float)
+            .unwrap()
+            .value
+            .unwrap()
+            .is_nan());
 
-        let data = Position::write_with_resolution(f32::NAN, Resolution::Int8).as_bytes().unwrap();
+        let data = Position::write_with_resolution(f32::NAN, Resolution::Int8)
+            .as_bytes()
+            .unwrap();
         assert_eq!(data, vec!(i8::MIN as u8));
-        assert!(Position::from_bytes(&data, Resolution::Int8).unwrap().value.unwrap().is_nan());
+        assert!(Position::from_bytes(&data, Resolution::Int8)
+            .unwrap()
+            .value
+            .unwrap()
+            .is_nan());
 
-        let data = Position::write_with_resolution(f32::NAN, Resolution::Int16).as_bytes().unwrap();
+        let data = Position::write_with_resolution(f32::NAN, Resolution::Int16)
+            .as_bytes()
+            .unwrap();
         assert_eq!(data, vec!(0, 128));
-        assert!(Position::from_bytes(&data, Resolution::Int16).unwrap().value.unwrap().is_nan());
+        assert!(Position::from_bytes(&data, Resolution::Int16)
+            .unwrap()
+            .value
+            .unwrap()
+            .is_nan());
 
-        let data = Position::write_with_resolution(f32::NAN, Resolution::Int32).as_bytes().unwrap();
+        let data = Position::write_with_resolution(f32::NAN, Resolution::Int32)
+            .as_bytes()
+            .unwrap();
         assert_eq!(data, vec!(0, 0, 0, 128));
-        assert!(Position::from_bytes(&data, Resolution::Int32).unwrap().value.unwrap().is_nan());
+        assert!(Position::from_bytes(&data, Resolution::Int32)
+            .unwrap()
+            .value
+            .unwrap()
+            .is_nan());
     }
 
     #[test]

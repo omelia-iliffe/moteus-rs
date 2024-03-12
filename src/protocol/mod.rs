@@ -1,5 +1,5 @@
-pub mod registers;
 mod frame;
+pub mod registers;
 #[macro_use]
 mod register_macros;
 

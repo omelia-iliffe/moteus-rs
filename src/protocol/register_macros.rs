@@ -4,7 +4,7 @@ macro_rules! int_rw_register {
         #[derive(Clone, Debug, PartialEq)]
         pub struct $reg {
             value: Option<$type>,
-            resolution: Resolution
+            resolution: Resolution,
         }
         impl $reg {
             fn as_bytes(&self) -> Result<Vec<u8>, RegisterError> {
@@ -41,7 +41,9 @@ macro_rules! int_rw_register {
                 $addr
             }
 
-            fn from_bytes(bytes: &[u8], resolution: Resolution) -> Result<Self, RegisterError> where Self: Sized
+            fn from_bytes(bytes: &[u8], resolution: Resolution) -> Result<Self, RegisterError>
+            where
+                Self: Sized,
             {
                 Ok(match resolution {
                     Resolution::Int8 => $reg {
@@ -90,7 +92,6 @@ macro_rules! int_rw_register {
                     resolution: r,
                 }
             }
-
         }
     };
 }
@@ -112,7 +113,9 @@ macro_rules! map_rw_register {
                     Resolution::Int8 => value.try_into_1_byte(Some($mapping)).map(|x| vec![x]),
                     Resolution::Int16 => value.try_into_2_bytes(Some($mapping)).map(|x| x.to_vec()),
                     Resolution::Int32 => value.try_into_4_bytes(Some($mapping)).map(|x| x.to_vec()),
-                    Resolution::Float => value.try_into_f32_bytes(Some($mapping)).map(|x| x.to_vec()),
+                    Resolution::Float => {
+                        value.try_into_f32_bytes(Some($mapping)).map(|x| x.to_vec())
+                    }
                 }
             }
         }
@@ -138,7 +141,9 @@ macro_rules! map_rw_register {
                 $addr
             }
 
-            fn from_bytes(bytes: &[u8], resolution: Resolution) -> Result<Self, RegisterError> where Self: Sized
+            fn from_bytes(bytes: &[u8], resolution: Resolution) -> Result<Self, RegisterError>
+            where
+                Self: Sized,
             {
                 Ok(match resolution {
                     Resolution::Int8 => Self {
@@ -187,7 +192,6 @@ macro_rules! map_rw_register {
                     resolution: r,
                 }
             }
-
         }
     };
 }

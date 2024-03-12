@@ -1,9 +1,8 @@
-use crate::protocol::{
-    Frame, FrameBuilder, FrameError, FrameParseError, ResponseFrame,
-};
 use fdcanusb::{CanFdFrame, FdCanUSB};
 use serial2::SerialPort;
+
 use crate::frame::QueryType;
+use crate::protocol::{Frame, FrameBuilder, FrameError, FrameParseError, ResponseFrame};
 
 type Result<T> = std::result::Result<T, Error>;
 
@@ -47,14 +46,22 @@ impl Default for Controller {
 }
 
 impl Controller {
-    pub fn with_query<F>(default_query: F) -> Self where F: Into<FrameBuilder> {
+    pub fn with_query<F>(default_query: F) -> Self
+    where
+        F: Into<FrameBuilder>,
+    {
         Controller {
             default_query: default_query.into(),
             ..Self::default()
         }
     }
 
-    pub fn send<F: Into<FrameBuilder>>(&mut self, id: u8, frame: F, query: QueryType<F>) -> Result<Option<ResponseFrame>> {
+    pub fn send<F: Into<FrameBuilder>>(
+        &mut self,
+        id: u8,
+        frame: F,
+        query: QueryType<F>,
+    ) -> Result<Option<ResponseFrame>> {
         let expect_response = query.expect_repsonse();
         let frame = match query {
             QueryType::None => frame.into().build(),
@@ -68,7 +75,10 @@ impl Controller {
         id: u8,
         frame: F,
         expect_response: bool,
-    ) -> Result<Option<ResponseFrame>> where F: Into<Frame> {
+    ) -> Result<Option<ResponseFrame>>
+    where
+        F: Into<Frame>,
+    {
         let frame = frame.into();
         let arbitration_id = {
             match expect_response {

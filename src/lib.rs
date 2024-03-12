@@ -1,7 +1,7 @@
 mod bus;
-mod protocol;
 pub mod frame;
+mod protocol;
 
 pub use bus::Controller;
-pub use protocol::{registers, Resolution};
 pub use fdcanusb::FdCanUSB;
+pub use protocol::{registers, Resolution};

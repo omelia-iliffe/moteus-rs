@@ -1,12 +1,11 @@
-/// Based on the Python example [Simple] from the moteus library
-//
-// """
-// This example commands a single servo at ID #1 using the default
-// transport to hold the current position indefinitely, and prints the
-// state of the servo to the console.
-// """
-use moteus::{Controller, registers};
+//! Based on the Python example [Simple] from the moteus library
+//!
+//!
+//! This example commands a single servo at ID #1 using the default
+//! transport to hold the current position indefinitely, and prints the
+//! state of the servo to the console.
 use moteus::frame::QueryType;
+use moteus::{registers, Controller};
 
 mod _logging;
 
@@ -30,12 +29,14 @@ fn main() {
         // It has a __repr__ method, and has a 'values' field which can
         // be used to examine individual result registers.
         // state = await c.set_position(position=math.nan, query=True)
-        let state = c.send(1, moteus::frame::Position::hold(), QueryType::Default).unwrap().expect("No response");
+        let state = c
+            .send(1, moteus::frame::Position::hold(), QueryType::Default)
+            .unwrap()
+            .expect("No response");
         // Print out everything.
         log::debug!("{:?}", state);
         // Print out just the position register.
         log::info!("Position: {:?}\n", state.get::<registers::Position>());
-
 
         // Wait 20ms between iterations.  By default, when commanded
         // over CAN, there is a watchdog which requires commands to be
