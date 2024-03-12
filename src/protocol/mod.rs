@@ -1,9 +1,11 @@
-mod registers;
+pub mod registers;
 mod frame;
+#[macro_use]
+mod register_macros;
 
-pub use registers::{Register, Mode};
-pub use frame::{FrameError, SubFrame};
+pub use frame::{Frame, FrameBuilder, FrameError, FrameParseError, ResponseFrame};
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Resolution {
     Int8,
     Int16,
