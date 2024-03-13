@@ -78,17 +78,22 @@ impl From<Position> for FrameBuilder {
     }
 }
 
-#[derive(Debug, Default, Clone)]
-pub enum QueryType<F> {
+#[derive(Debug, Clone)]
+pub enum QueryType {
     None,
-    #[default]
     Default,
-    Custom(F),
+    Custom(FrameBuilder),
 }
 
-impl<F> QueryType<F> {
+impl QueryType {
     pub fn expect_repsonse(&self) -> bool {
         matches!(self, QueryType::Default | QueryType::Custom(_))
+    }
+}
+
+impl From<FrameBuilder> for QueryType {
+    fn from(fb: FrameBuilder) -> Self {
+        QueryType::Custom(fb)
     }
 }
 
@@ -194,5 +199,24 @@ impl From<Query> for FrameBuilder {
             fb = fb.add([register]);
         }
         fb
+    }
+}
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_query() {
+        let mut c = crate::Controller::default();
+        let _ = c.query(1, QueryType::Default);
+        let _ = c.query(1, QueryType::None);
+
+        let custom = Frame::builder().add([registers::Mode::write(registers::Modes::Position).into()]);
+        let _ = c.query(1, QueryType::Custom(custom));
+
+        let custom = Frame::builder().add([registers::Mode::write(registers::Modes::Position).into()]);
+        let _ = c.query(1, custom.into());
     }
 }
