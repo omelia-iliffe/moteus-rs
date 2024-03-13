@@ -3,8 +3,8 @@ macro_rules! int_rw_register {
     ($reg:ident : $addr:expr, $type:ty, $res:expr) => {
         #[derive(Clone, Debug, PartialEq)]
         pub struct $reg {
-            value: Option<$type>,
-            resolution: Resolution,
+            pub value: Option<$type>,
+            pub resolution: Resolution,
         }
         impl $reg {
             fn as_bytes(&self) -> Result<Vec<u8>, RegisterError> {
@@ -101,8 +101,8 @@ macro_rules! map_rw_register {
     ($reg:ident : $addr:expr, $mapping:expr) => {
         #[derive(Clone, Debug, PartialEq)]
         pub struct $reg {
-            value: Option<f32>,
-            resolution: Resolution,
+            pub value: Option<f32>,
+            pub resolution: Resolution,
         }
         impl $reg {
             fn as_bytes(&self) -> Result<Vec<u8>, RegisterError> {
@@ -116,6 +116,15 @@ macro_rules! map_rw_register {
                     Resolution::Float => {
                         value.try_into_f32_bytes(Some($mapping)).map(|x| x.to_vec())
                     }
+                }
+            }
+        }
+
+        impl From<f32> for $reg {
+            fn from(data: f32) -> $reg {
+                $reg {
+                    value: Some(data),
+                    resolution: Self::DEFAULT_RESOLUTION,
                 }
             }
         }
