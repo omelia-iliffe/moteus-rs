@@ -4,19 +4,21 @@
 //! This example commands a single servo at ID #1 using the default
 //! transport to hold the current position indefinitely, and prints the
 //! state of the servo to the console.
+use fdcanusb::FdCanUSB;
 use moteus::frame::QueryType;
 use moteus::{registers, Controller};
 
-mod _logging;
-
-fn main() {
-    _logging::init(env!("CARGO_CRATE_NAME"), 3);
-    // By default, Controller connects to id 1, and picks an arbitrary
+fn main() -> Result<(), moteus::Error> {
+    env_logger::Builder::from_default_env().init();
+    // By default, the Controller connects to id 1, and picks an arbitrary
     // CAN-FD transport, prefering an attached fdcanusb if available.
-    let mut c = Controller::default();
+    let mut c = crate::Controller::new(
+        FdCanUSB::open("/dev/fdcanusb", fdcanusb::serial2::KeepSettings)?,
+        false,
+    );
     // In case the controller had faulted previously, at the start of
-    // this script we send the stop command in order to clear it.
-    c.send(1, moteus::frame::Stop, QueryType::None).unwrap();
+    // this script we send the stop command to clear it.
+    c.send(1, moteus::frame::Stop, None).unwrap();
 
     loop {
         // `set_position` accepts an optional keyword argument for each
@@ -28,10 +30,8 @@ fn main() {
         // The return type of 'set_position' is a moteus.Result type.
         // It has a __repr__ method, and has a 'values' field which can
         // be used to examine individual result registers.
-        // state = await c.set_position(position=math.nan, query=True)
         let state = c
-            .send(1, moteus::frame::Position::hold(), QueryType::Default)
-            .unwrap()
+            .send(1, moteus::frame::Position::hold(), Some(QueryType::Default))?
             .expect("No response");
         // Print out everything.
         log::debug!("{:?}", state);

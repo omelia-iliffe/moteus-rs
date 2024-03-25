@@ -9,29 +9,26 @@ use moteus::frame::{Query, QueryType};
 use moteus::registers::*;
 use moteus::{registers, Controller};
 
-mod _logging;
+fn main() -> Result<(), moteus::Error> {
+    env_logger::Builder::from_default_env().init();
 
-fn main() {
-    _logging::init(env!("CARGO_CRATE_NAME"), 3);
-
-    let qr = Query {
-        extra: Some(vec![
-            ControlPosition::read().into(),
-            ControlVelocity::read().into(),
-            ControlTorque::read().into(),
-            ControlPositionError::read().into(),
-            ControlVelocityError::read().into(),
-            ControlTorqueError::read().into(),
-        ]),
-        ..Query::default()
-    };
+    let qr = Query::new_with_extra([
+        ControlPosition::read().into(),
+        ControlVelocity::read().into(),
+        ControlTorque::read().into(),
+        ControlPositionError::read().into(),
+        ControlVelocityError::read().into(),
+        ControlTorqueError::read().into(),
+    ]);
     // By default, Controller connects to id 1, and picks an arbitrary
     // CAN-FD transport, prefering an attached fdcanusb if available
-    let mut c = Controller::with_query(qr);
-    c.transport.flush().unwrap();
+    let mut transport =
+        fdcanusb::FdCanUSB::open("/dev/fdcanusb", fdcanusb::serial2::KeepSettings).unwrap();
+    transport.flush().unwrap();
+    let mut c = Controller::with_query(transport, false, qr);
     // In case the controller had faulted previously, at the start of
     // this script we send the stop command in order to clear it
-    c.send(1, moteus::frame::Stop, QueryType::None).unwrap();
+    c.send(1, moteus::frame::Stop, None).unwrap();
 
     let elapsed = std::time::Instant::now();
 
@@ -60,8 +57,7 @@ fn main() {
 
         // Print out everything.
         let state = c
-            .send(1, command, QueryType::Default)
-            .unwrap()
+            .send(1, command, Some(QueryType::Default))?
             .expect("No response");
         // Print out just the position register.
         log::debug!("{:?}", state);

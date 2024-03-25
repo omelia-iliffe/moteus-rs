@@ -1,3 +1,10 @@
+//! Registers for the Moteus controllers
+//!
+//! The Moteus controllers have a number of registers that can be read from and written to. This module provides a number of traits and structs to help with reading and writing to these registers.
+//! A list of registers can be found in the [Moteus Reference](https://github.com/mjbots/moteus/blob/main/docs/reference.md#a2b-registers).
+//!
+//! This module contains the register structs as well as trait interfaces and register types (such as [`Modes`] and [`HomeStates`]).
+
 use byteorder::{ReadBytesExt, LE};
 use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
@@ -5,25 +12,39 @@ use zerocopy::AsBytes;
 
 use crate::{int_rw_register, map_rw_register, Resolution};
 
+/// As the Moteus Registers are each a unique struct, they all implement the [`Register`] trait.
 pub trait Register {
+    /// Returns the address of the register as a [`RegisterAddr`].
     fn address() -> RegisterAddr;
+    /// Creates the register from a slice of bytes.
     fn from_bytes(bytes: &[u8], resolution: Resolution) -> Result<Self, RegisterError>
-    where
-        Self: Sized;
+        where
+            Self: Sized;
 }
 
+/// [`RegisterData`] is a trait that is implemented by the structs that represent the data that can be written to the registers.
 pub trait RegisterData<T> {
+    /// Each struct has a default [`Resolution`] that is used when writing to the register.
     const DEFAULT_RESOLUTION: Resolution;
+    /// Creates a new instance of the struct with the data to be written using the default resolution.
     fn write(data: T) -> Self;
+    /// Creates a new instance of the struct with the data to be written using the specified resolution.
     fn write_with_resolution(data: T, r: Resolution) -> Self;
+    /// Creates a new instance of the struct for reading using the default resolution.
     fn read() -> Self;
+    /// Creates a new instance of the struct for reading using the specified resolution.
     fn read_with_resolution(r: Resolution) -> Self;
 }
 
+/// A struct that represents the raw data (as `Vec<u8>`) that has been read from, or will be written to, a register
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub struct RegisterDataStruct {
+    // TODO: Rename me
+    /// The [`RegisterAddr`] of the register
     pub address: RegisterAddr,
+    /// The [`Resolution`] of the data
     pub resolution: Resolution,
+    /// The data to be written to the register, or None if it will be read from the register
     pub data: Option<Vec<u8>>,
 }
 
@@ -56,8 +77,14 @@ impl std::fmt::Debug for RegisterDataStruct {
     }
 }
 
+/// A sequence of one or more uint8 values, in least significant byte first order.
+/// For each value, the 7 LSBs contain data and if the MSB is set, it means there are more bytes remaining.
+/// At most, it may represent a single uint32 and thus 5 bytes is the maximum valid length.
+pub type Varuint = Vec<u8>;
+
 impl RegisterAddr {
-    pub fn address_as_bytes(&self) -> Vec<u8> {
+    /// Converts the address to a [`varuint`]
+    pub fn address_as_bytes(&self) -> Varuint {
         let mut buf = Vec::new();
         let mut val = *self as u16;
         loop {
@@ -83,32 +110,39 @@ trait TryIntoBytes {
 
 trait TryFromBytes {
     fn try_from_1_byte(byte: u8, mapping: Option<Map>) -> Result<Self, RegisterError>
-    where
-        Self: Sized;
+        where
+            Self: Sized;
     fn try_from_2_bytes(bytes: &[u8], mapping: Option<Map>) -> Result<Self, RegisterError>
-    where
-        Self: Sized;
+        where
+            Self: Sized;
     fn try_from_4_bytes(bytes: &[u8], mapping: Option<Map>) -> Result<Self, RegisterError>
-    where
-        Self: Sized;
+        where
+            Self: Sized;
     fn try_from_f32_bytes(bytes: &[u8], mapping: Option<Map>) -> Result<Self, RegisterError>
-    where
-        Self: Sized;
+        where
+            Self: Sized;
 }
 
-pub type Map = (f32, f32, f32);
+pub(crate) type Map = (f32, f32, f32);
 
-pub const NO_MAP: Map = (1.0, 1.0, 1.0);
-pub const POSITION_MAP: Map = (0.01, 0.0001, 0.00001);
-pub const VELOCITY_MAP: Map = (0.1, 0.00025, 0.00001);
-pub const ACCEL_MAP: Map = (0.1, 0.00025, 0.00001);
-pub const TORQUE_MAP: Map = (0.5, 0.01, 0.001);
-pub const PWM_MAP: Map = (1.0 / 127.0, 1.0 / 32767.0, 1.0 / 2147483647.0);
-pub const VOLTAGE_MAP: Map = (0.5, 0.1, 0.001);
-pub const TEMPERATURE_MAP: Map = (1.0, 0.1, 0.001);
-pub const TIME_MAP: Map = (0.01, 0.001, 0.000001);
-pub const CURRENT_MAP: Map = (1.0, 0.1, 0.001);
+pub(crate) const NO_MAP: Map = (1.0, 1.0, 1.0);
+pub(crate) const POSITION_MAP: Map = (0.01, 0.0001, 0.00001);
+pub(crate) const VELOCITY_MAP: Map = (0.1, 0.00025, 0.00001);
+pub(crate) const ACCEL_MAP: Map = (0.1, 0.00025, 0.00001);
+pub(crate) const TORQUE_MAP: Map = (0.5, 0.01, 0.001);
+pub(crate) const PWM_MAP: Map = (1.0 / 127.0, 1.0 / 32767.0, 1.0 / 2147483647.0);
+pub(crate) const VOLTAGE_MAP: Map = (0.5, 0.1, 0.001);
+pub(crate) const TEMPERATURE_MAP: Map = (1.0, 0.1, 0.001);
+#[allow(unused)]
+pub(crate) const TIME_MAP: Map = (0.01, 0.001, 0.000001);
+pub(crate) const CURRENT_MAP: Map = (1.0, 0.1, 0.001);
 
+/// [`FrameRegister`]s are used to specify the type of data that is being written to or read from a register.
+/// Some, like [`ReplyInt8`] and [`WriteError`], are only returned in responses.
+/// Others, like [`WriteInt16`] and [`ReadF32`], are used when sending frame.
+///
+/// The number of values can be encoded into the 2 Least Significant bits of the [`FrameRegister`]
+#[allow(missing_docs)]
 #[derive(Debug, Clone, Copy, FromPrimitive, PartialEq, Eq, AsBytes, Hash)]
 #[repr(u8)]
 pub enum FrameRegisters {
@@ -126,15 +160,22 @@ pub enum FrameRegisters {
     ReplyInt16 = 0x24,
     ReplyInt32 = 0x28,
     ReplyF32 = 0x2c,
+    /// returned when writing to a register fails
     WriteError = 0x30,
+    /// returned when reading from a register fails
     ReadError = 0x31,
+    /// Used to receive ascii data with moteus_tool or tview
     StreamClientData = 0x40,
+    /// Used by the moteus_tool or Tview to send ascii data
     StreamServerData = 0x41,
+    /// Used by the moteus_tool and Tview to poll for responses
     StreamClientPoll = 0x42,
+    /// Used to buffer the can frame
     Nop = 0x50,
 }
 
 impl FrameRegisters {
+    /// Returns the [`Resolution`] of the register
     pub fn resolution(&self) -> Option<Resolution> {
         let r = match self {
             FrameRegisters::WriteInt8 | FrameRegisters::ReadInt8 | FrameRegisters::ReplyInt8 => {
@@ -153,6 +194,7 @@ impl FrameRegisters {
         };
         Some(r)
     }
+    /// Returns the number of bytes for the register
     pub fn size(&self) -> Option<usize> {
         let size = match self.resolution()? {
             Resolution::Int8 => 1,
@@ -164,7 +206,9 @@ impl FrameRegisters {
     }
 }
 
+/// Each register of the moteus board has an address which can be encoded as a [`varuint`]
 #[derive(Debug, Clone, Copy, AsBytes, FromPrimitive, PartialEq, Eq, Hash)]
+#[allow(missing_docs)]
 #[repr(u16)]
 pub enum RegisterAddr {
     Mode = 0x000,
@@ -376,17 +420,37 @@ int_rw_register!(RequireReindex: RegisterAddr::RequireReindex, i8, Resolution::I
 int_rw_register!(DriverFault1: RegisterAddr::DriverFault1, u32, Resolution::Int32);
 int_rw_register!(DriverFault2: RegisterAddr::DriverFault2, u32, Resolution::Int32);
 
-#[derive(Debug, PartialEq)]
+/// Errors that can occur when writing and/or parsing registers
+#[allow(missing_docs)]
+#[derive(Debug)]
 pub enum RegisterError {
+    /// Returned when the value is too large to fit in the register
     Overflow,
+    /// Returned when data is tried into a type that is not valid.
+    /// For example, `0x50` -> [`Modes`] is invalid and returns [`RegisterError::InvalidData`]
+    // ```rust
+    // use moteus::registers::{Modes, RegisterError};
+    // let err = Modes::try_from_1_byte(0x50, None).unwrap_err();
+    // assert_eq!(err, RegisterError::InvalidData);
+    // ```
     InvalidData,
+    /// Returned when the parsed address of a register is invalid. All valid addresses are defined in the [`RegisterAddr`] enum, so this shouldn't happen.
     InvalidAddress,
+    /// Returned when a float is tried to be written to a register that only accepts integers
     IntAsFloat,
-    // IO(std::io::Error), //TODO: std::io::Error doesn't impl debug :(
-    IO(String),
+    IO(std::io::Error),
+    /// Returned when there is no mapping for the register
     NoMapping,
+    /// Returned when writing is attempted with a register instance that doesn't have any data.
     NoData,
 }
+
+impl From<std::io::Error> for RegisterError {
+    fn from(e: std::io::Error) -> Self {
+        RegisterError::IO(e)
+    }
+}
+
 
 impl TryIntoBytes for i8 {
     fn try_into_1_byte(self, _: Option<Map>) -> Result<u8, RegisterError> {
@@ -500,23 +564,17 @@ impl TryFromBytes for i32 {
     }
     fn try_from_2_bytes(bytes: &[u8], _: Option<Map>) -> Result<Self, RegisterError> {
         let mut rdr = std::io::Cursor::new(bytes);
-        let value = rdr
-            .read_i16::<LE>()
-            .map_err(|e| RegisterError::IO(format!("{:?}", e)))?;
+        let value = rdr.read_i16::<LE>()?;
         Ok(value as i32)
     }
     fn try_from_4_bytes(bytes: &[u8], _: Option<Map>) -> Result<Self, RegisterError> {
         let mut rdr = std::io::Cursor::new(bytes);
-        let value = rdr
-            .read_i32::<LE>()
-            .map_err(|e| RegisterError::IO(format!("{:?}", e)))?;
+        let value = rdr.read_i32::<LE>()?;
         Ok(value)
     }
     fn try_from_f32_bytes(bytes: &[u8], _: Option<Map>) -> Result<Self, RegisterError> {
         let mut rdr = std::io::Cursor::new(bytes);
-        let value = rdr
-            .read_f32::<LE>()
-            .map_err(|e| RegisterError::IO(format!("{:?}", e)))?;
+        let value = rdr.read_f32::<LE>()?;
         Ok(value as i32)
     }
 }
@@ -552,16 +610,12 @@ impl TryFromBytes for u32 {
     }
     fn try_from_2_bytes(bytes: &[u8], _: Option<Map>) -> Result<Self, RegisterError> {
         let mut rdr = std::io::Cursor::new(bytes);
-        let value = rdr
-            .read_i16::<LE>()
-            .map_err(|e| RegisterError::IO(format!("{:?}", e)))?;
+        let value = rdr.read_i16::<LE>()?;
         Ok(value as u32)
     }
     fn try_from_4_bytes(bytes: &[u8], _: Option<Map>) -> Result<Self, RegisterError> {
         let mut rdr = std::io::Cursor::new(bytes);
-        let value = rdr
-            .read_i32::<LE>()
-            .map_err(|e| RegisterError::IO(format!("{:?}", e)))?;
+        let value = rdr.read_i32::<LE>()?;
         Ok(value as u32)
     }
     fn try_from_f32_bytes(_bytes: &[u8], _: Option<Map>) -> Result<Self, RegisterError> {
@@ -574,7 +628,7 @@ impl TryIntoBytes for f32 {
         if !self.is_finite() {
             return Ok(i8::MIN as u8);
         }
-        let value = self / mapping.unwrap().0;
+        let value = self / mapping.ok_or(RegisterError::NoMapping)?.0;
 
         if value > i8::MAX as f32 || value < i8::MIN as f32 {
             return Err(RegisterError::Overflow);
@@ -585,7 +639,7 @@ impl TryIntoBytes for f32 {
         if !self.is_finite() {
             return Ok(i16::MIN.to_le_bytes());
         }
-        let value = self / mapping.unwrap().1;
+        let value = self / mapping.ok_or(RegisterError::NoMapping)?.1;
         if value > i16::MAX as f32 || value < i16::MIN as f32 {
             return Err(RegisterError::Overflow);
         }
@@ -595,7 +649,7 @@ impl TryIntoBytes for f32 {
         if !self.is_finite() {
             return Ok(i32::MIN.to_le_bytes());
         }
-        let value = self / mapping.unwrap().2;
+        let value = self / mapping.ok_or(RegisterError::NoMapping)?.2;
         if value > i32::MAX as f32 || value < i32::MIN as f32 {
             return Err(RegisterError::Overflow);
         }
@@ -628,9 +682,7 @@ impl TryFromBytes for f32 {
             return Err(RegisterError::NoMapping);
         };
         let mut rdr = std::io::Cursor::new(bytes);
-        let value = rdr
-            .read_i16::<LE>()
-            .map_err(|e| RegisterError::IO(format!("{:?}", e)))?;
+        let value = rdr.read_i16::<LE>()?;
         let value = {
             if value == i16::MIN {
                 f32::NAN
@@ -645,9 +697,7 @@ impl TryFromBytes for f32 {
             return Err(RegisterError::NoMapping);
         };
         let mut rdr = std::io::Cursor::new(bytes);
-        let value = rdr
-            .read_i32::<LE>()
-            .map_err(|e| RegisterError::IO(format!("{:?}", e)))?;
+        let value = rdr.read_i32::<LE>()?;
         let value = {
             if value == i32::MIN {
                 f32::NAN
@@ -662,13 +712,12 @@ impl TryFromBytes for f32 {
         //     return Err(RegisterError::NoMapping);
         // };
         let mut rdr = std::io::Cursor::new(bytes);
-        let value = rdr
-            .read_f32::<LE>()
-            .map_err(|e| RegisterError::IO(format!("{:?}", e)))?;
+        let value = rdr.read_f32::<LE>()?;
         Ok(value)
     }
 }
 
+#[allow(missing_docs)]
 #[derive(Debug, Clone, Copy, AsBytes, FromPrimitive, PartialEq, Eq)]
 #[repr(u8)]
 pub enum Modes {
@@ -726,6 +775,7 @@ impl TryFromBytes for Modes {
 
 #[derive(Debug, Clone, Copy, AsBytes, FromPrimitive, PartialEq, Eq)]
 #[repr(u8)]
+#[allow(missing_docs)]
 pub enum Faults {
     Success = 0,
 
@@ -790,6 +840,7 @@ impl TryFromBytes for Faults {
 
 #[derive(Debug, Clone, Copy, AsBytes, FromPrimitive, PartialEq, Eq)]
 #[repr(u8)]
+#[allow(missing_docs)]
 pub enum HomeStates {
     Relative = 0,
     Rotor = 1,
@@ -832,6 +883,8 @@ impl TryFromBytes for HomeStates {
 
 #[cfg(test)]
 mod tests {
+    #![allow(clippy::unwrap_used)]
+
     use super::*;
 
     #[test]

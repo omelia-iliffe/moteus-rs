@@ -1,12 +1,26 @@
+/// Used to define a register with Integers as the representation
 #[macro_export]
 macro_rules! int_rw_register {
     ($reg:ident : $addr:expr, $type:ty, $res:expr) => {
+        #[doc = concat!("Struct representing the ",stringify!($reg)," register at ",stringify!($addr)," .")]
+        #[doc = concat!(stringify!($reg)," can be represented as larger ints but not floats or smaller ints")]
         #[derive(Clone, Debug, PartialEq)]
         pub struct $reg {
+            /// The value of the register
             pub value: Option<$type>,
+            /// The resolution of the value
             pub resolution: Resolution,
         }
         impl $reg {
+            /// If the instance has a value, return it. Otherwise, return None
+            pub fn value(&self) -> Option<$type> {
+                self.value
+            }
+            /// Return the resolution
+            /// This either is the resolution to be read from the register or the resolution of the value field
+            pub fn resolution(&self) -> Resolution {
+                self.resolution
+            }
             fn as_bytes(&self) -> Result<Vec<u8>, RegisterError> {
                 let Some(value) = self.value else {
                     return Err(RegisterError::NoData);
@@ -96,15 +110,29 @@ macro_rules! int_rw_register {
     };
 }
 
+/// Used to define a register with f32 as the representation.
+/// These registers using a [`crate::registers::Map`] to convert to different resolutions
 #[macro_export]
 macro_rules! map_rw_register {
     ($reg:ident : $addr:expr, $mapping:expr) => {
         #[derive(Clone, Debug, PartialEq)]
+        #[doc = concat!("Struct representing the ",stringify!($reg)," register at ",stringify!($addr)," .")]
+        #[doc = concat!(stringify!($reg)," uses [`", stringify!($mapping), "`] to map between different resolutions")]
         pub struct $reg {
-            pub value: Option<f32>,
-            pub resolution: Resolution,
+            value: Option<f32>,
+            resolution: Resolution,
         }
         impl $reg {
+            /// If the instance has a value, return it. Otherwise, return None
+            pub fn value(&self) -> Option<f32> {
+                self.value
+            }
+            /// Return the resolution
+            /// This either is the resolution to be read from the register or the resolution of the value field
+            pub fn resolution(&self) -> Resolution {
+                self.resolution
+            }
+
             fn as_bytes(&self) -> Result<Vec<u8>, RegisterError> {
                 let Some(value) = self.value else {
                     return Err(RegisterError::NoData);

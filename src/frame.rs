@@ -1,7 +1,16 @@
+//! [`Frame`]s are high-level structs used to format read registers and write registers with data into CAN-FD frames.
+//!
+//! [`FrameBuilder`] is provided to make creating [`Frame`]s easier.
+//!
+//! Many structs are provided to make creating [`Frame`]s easier.
+//! For example, [`Position`] is used to create a frame to set the position of a motor.
+//! These structs can be converted into a [`FrameBuilder`] using the `From` and `Into` traits.
+
 use crate::protocol::{Frame, FrameBuilder};
 use crate::registers::RegisterData;
 use crate::{registers, Resolution};
 
+/// Sets the mode to `registers::Modes::Stopped`.
 #[derive(Debug, Default, Clone)]
 pub struct Stop;
 
@@ -11,23 +20,41 @@ impl From<Stop> for FrameBuilder {
     }
 }
 
+/// Sets the mode to `registers::Modes::Position`.
+///
+/// Each field is optional, and if a field is `None`, the corresponding register is omitted from the frame.
+///
+/// Additionally, some associated methods are provided. See:
+///  - [`Position::hold`]
 #[derive(Debug, Default, Clone)]
 pub struct Position {
+    /// The `position` field is used to set the [`registers::CommandPosition`] of the motor.
     pub position: Option<registers::CommandPosition>,
+    /// The `velocity` field is used to set the [`registers::CommandVelocity`] of the motor.
     pub velocity: Option<registers::CommandVelocity>,
+    /// The `feedforward_torque` field is used to set the [`registers::CommandFeedforwardTorque`] of the motor.
     pub feedforward_torque: Option<registers::CommandFeedforwardTorque>,
+    /// The `kp_scale` field is used to set the [`registers::CommandKpScale`] of the motor.
     pub kp_scale: Option<registers::CommandKpScale>,
+    /// The `kd_scale` field is used to set the [`registers::CommandKdScale`] of the motor.
     pub kd_scale: Option<registers::CommandKdScale>,
+    /// The `maximum_torque` field is used to set the [`registers::CommandPositionMaxTorque`] of the motor.
     pub maximum_torque: Option<registers::CommandPositionMaxTorque>,
+    /// The `stop_position` field is used to set the [`registers::CommandStopPosition`] of the motor.
     pub stop_position: Option<registers::CommandStopPosition>,
+    /// The `watchdog_timeout` field is used to set the [`registers::CommandTimeout`] of the motor.
     pub watchdog_timeout: Option<registers::CommandTimeout>,
+    /// The `velocity_limit` field is used to set the [`registers::VelocityLimit`] of the motor.
     pub velocity_limit: Option<registers::VelocityLimit>,
+    /// The `acceleration_limit` field is used to set the [`registers::AccelerationLimit`] of the motor.
     pub acceleration_limit: Option<registers::AccelerationLimit>,
+    /// The `fixed_voltage_override` field is used to set the [`registers::FixedVoltage`] of the motor.
     pub fixed_voltage_override: Option<registers::FixedVoltage>,
     // todo: add query override
 }
 
 impl Position {
+    /// Sets the [`registers::CommandPosition`] to `f32::NAN` to hold the current position.
     pub fn hold() -> Self {
         Self {
             position: Some(registers::CommandPosition::write(f32::NAN)),
@@ -36,68 +63,56 @@ impl Position {
     }
 }
 
-impl From<Position> for FrameBuilder {
-    fn from(value: Position) -> Self {
-        let mut fb = Frame::builder();
-        fb = fb.add_single(registers::Mode::write(registers::Modes::Position).into());
+impl IntoIterator for Position {
+    type Item = registers::RegisterDataStruct;
+    type IntoIter = std::vec::IntoIter<Self::Item>;
 
-        if let Some(position) = value.position {
-            fb = fb.add_single(position.into());
-        }
-        if let Some(velocity) = value.velocity {
-            fb = fb.add_single(velocity.into());
-        }
-        if let Some(feedforward_torque) = value.feedforward_torque {
-            fb = fb.add_single(feedforward_torque.into());
-        }
-        if let Some(kp_scale) = value.kp_scale {
-            fb = fb.add_single(kp_scale.into());
-        }
-        if let Some(kd_scale) = value.kd_scale {
-            fb = fb.add_single(kd_scale.into());
-        }
-        if let Some(maximum_torque) = value.maximum_torque {
-            fb = fb.add_single(maximum_torque.into());
-        }
-        if let Some(stop_position) = value.stop_position {
-            fb = fb.add_single(stop_position.into());
-        }
-        if let Some(watchdog_timeout) = value.watchdog_timeout {
-            fb = fb.add_single(watchdog_timeout.into());
-        }
-        if let Some(velocity_limit) = value.velocity_limit {
-            fb = fb.add_single(velocity_limit.into());
-        }
-        if let Some(acceleration_limit) = value.acceleration_limit {
-            fb = fb.add_single(acceleration_limit.into());
-        }
-        if let Some(fixed_voltage_override) = value.fixed_voltage_override {
-            fb = fb.add_single(fixed_voltage_override.into());
-        }
-        fb
+    fn into_iter(self) -> Self::IntoIter {
+        vec![
+            Some(registers::Mode::write(registers::Modes::Position).into()),
+            self.position.map(|p| p.into()),
+            self.velocity.map(|v| v.into()),
+            self.feedforward_torque.map(|f| f.into()),
+            self.kp_scale.map(|k| k.into()),
+            self.kd_scale.map(|k| k.into()),
+            self.maximum_torque.map(|m| m.into()),
+            self.stop_position.map(|s| s.into()),
+            self.watchdog_timeout.map(|w| w.into()),
+            self.velocity_limit.map(|v| v.into()),
+            self.acceleration_limit.map(|a| a.into()),
+            self.fixed_voltage_override.map(|f| f.into()),
+        ]
+            .into_iter()
+            .flatten()
+            .collect::<Vec<registers::RegisterDataStruct>>()
+            .into_iter()
     }
 }
 
+/// Specify which query is merged into the frame being sent.
 #[derive(Debug, Clone)]
 pub enum QueryType {
-    None,
+    /// Sends the [`Controller`]s default query.
     Default,
+    /// Sends the [`Controller`]s default query, merged with the provided [`FrameBuilder`].
+    DefaultAnd(FrameBuilder),
+    /// Sends the provided [`FrameBuilder`].
     Custom(FrameBuilder),
 }
 
-impl QueryType {
-    pub fn expect_repsonse(&self) -> bool {
-        matches!(self, QueryType::Default | QueryType::Custom(_))
-    }
-}
-
-impl From<FrameBuilder> for QueryType {
-    fn from(fb: FrameBuilder) -> Self {
-        QueryType::Custom(fb)
-    }
-}
-
+/// A query is a collection of registers to be read from the motor.
+/// The fields are some useful registers that are commonly queried, but any register can be added to the `extra` field.
+///
+/// The default query is:
+/// - `Mode` with resolution `Resolution::Int8`
+/// - `Position` with resolution `Resolution::Float`
+/// - `Velocity` with resolution `Resolution::Float`
+/// - `Torque` with resolution `Resolution::Float`
+/// - `Voltage` with resolution `Resolution::Int8`
+/// - `Temperature` with resolution `Resolution::Int8`
+/// - `Fault` with resolution `Resolution::Int8`
 #[derive(Debug, Clone)]
+#[allow(missing_docs)]
 pub struct Query {
     pub mode: Option<registers::Mode>,
     pub position: Option<registers::Position>,
@@ -117,6 +132,24 @@ pub struct Query {
     pub aux2_gpio: Option<registers::Aux1gpioStatus>,
 
     pub extra: Option<Vec<registers::RegisterDataStruct>>,
+}
+
+impl Query {
+    /// Creates a new [`Query`] with the fields set with sensible defaults.
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Extends the default query with extra registers.
+    pub fn new_with_extra<T>(extra: T) -> Self
+        where
+            T: IntoIterator<Item=registers::RegisterDataStruct>,
+    {
+        Self {
+            extra: Some(extra.into_iter().collect::<Vec<_>>()),
+            ..Self::default()
+        }
+    }
 }
 
 impl Default for Query {
@@ -145,78 +178,57 @@ impl Default for Query {
     }
 }
 
-impl From<Query> for FrameBuilder {
-    fn from(query: Query) -> FrameBuilder {
-        let mut fb = Frame::builder();
+impl IntoIterator for Query {
+    type Item = registers::RegisterDataStruct;
+    type IntoIter = std::vec::IntoIter<Self::Item>;
 
-        if let Some(mode) = query.mode {
-            fb = fb.add_single(mode.into());
-        }
-        if let Some(position) = query.position {
-            fb = fb.add_single(position.into());
-        }
-        if let Some(velocity) = query.velocity {
-            fb = fb.add_single(velocity.into());
-        }
-        if let Some(torque) = query.torque {
-            fb = fb.add_single(torque.into());
-        }
-        if let Some(q_current) = query.q_current {
-            fb = fb.add_single(q_current.into());
-        }
-        if let Some(d_current) = query.d_current {
-            fb = fb.add_single(d_current.into());
-        }
-        if let Some(abs_position) = query.abs_position {
-            fb = fb.add_single(abs_position.into());
-        }
-        if let Some(motor_temperature) = query.motor_temperature {
-            fb = fb.add_single(motor_temperature.into());
-        }
-        if let Some(trajectory_complete) = query.trajectory_complete {
-            fb = fb.add_single(trajectory_complete.into());
-        }
-
-        if let Some(home_state) = query.home_state {
-            fb = fb.add_single(home_state.into());
-        }
-        if let Some(voltage) = query.voltage {
-            fb = fb.add_single(voltage.into());
-        }
-        if let Some(temperature) = query.temperature {
-            fb = fb.add_single(temperature.into());
-        }
-        if let Some(fault) = query.fault {
-            fb = fb.add_single(fault.into());
-        }
-        if let Some(aux1_gpio) = query.aux1_gpio {
-            fb = fb.add_single(aux1_gpio.into());
-        }
-        if let Some(aux2_gpio) = query.aux2_gpio {
-            fb = fb.add_single(aux2_gpio.into());
-        }
-        for register in query.extra.unwrap_or_default() {
-            fb = fb.add([register]);
-        }
-        fb
+    fn into_iter(self) -> Self::IntoIter {
+        vec![
+            self.mode.map(|m| m.into()),
+            self.position.map(|p| p.into()),
+            self.velocity.map(|v| v.into()),
+            self.torque.map(|f| f.into()),
+            self.q_current.map(|k| k.into()),
+            self.d_current.map(|k| k.into()),
+            self.abs_position.map(|m| m.into()),
+            self.motor_temperature.map(|s| s.into()),
+            self.trajectory_complete.map(|w| w.into()),
+            self.home_state.map(|v| v.into()),
+            self.voltage.map(|a| a.into()),
+            self.temperature.map(|f| f.into()),
+            self.fault.map(|f| f.into()),
+            self.aux1_gpio.map(|f| f.into()),
+            self.aux2_gpio.map(|f| f.into()),
+        ]
+            .into_iter()
+            .flatten()
+            .collect::<Vec<registers::RegisterDataStruct>>()
+            .into_iter()
     }
 }
 
-
 #[cfg(test)]
 mod tests {
+    use fdcanusb::FdCanUSB;
+
     use super::*;
 
+    /// Will fail unless a motor is connected with id 1.
     #[test]
     fn test_query() {
-        let mut c = crate::Controller::default();
+        let mut c = crate::Controller::new(
+            FdCanUSB::open("/dev/fdcanusb", fdcanusb::serial2::KeepSettings)
+                .expect("Couldn't open fdcanusb at /dev/fdcanusb"),
+            false,
+        );
         let _ = c.query(1, QueryType::Default);
-        let _ = c.query(1, QueryType::None);
 
-        let custom = Frame::builder().add([registers::Mode::write(registers::Modes::Position).into()]);
+        let custom =
+            Frame::builder().add([registers::Mode::write(registers::Modes::Position).into()]);
         let _ = c.query(1, QueryType::Custom(custom));
 
-        let custom = Frame::builder().add([registers::Mode::write(registers::Modes::Position).into()]);
-        let _ = c.query(1, custom.into());
+        let custom =
+            Frame::builder().add([registers::Mode::write(registers::Modes::Position).into()]);
+        let _ = c.query(1, QueryType::DefaultAnd(custom));
     }
 }
