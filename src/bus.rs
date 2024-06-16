@@ -14,6 +14,18 @@ pub enum Error {
     FrameParse(FrameParseError),
 }
 
+impl std::error::Error for Error {}
+
+impl std::fmt::Display for Error {
+    fn fmt(&self, _f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Error::Io(e) => write!(_f, "IO error: {}", e),
+            Error::Frame(e) => write!(_f, "Frame error: {:?}", e),
+            Error::FrameParse(e) => write!(_f, "Frame parse error: {:?}", e),
+        }
+    }
+}
+
 impl From<std::io::Error> for Error {
     fn from(e: std::io::Error) -> Self {
         Error::Io(e)
