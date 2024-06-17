@@ -377,49 +377,6 @@ impl<R> From<R> for FrameBuilder
         FrameBuilder { registers }
     }
 }
-//
-// impl From<HashMap<FrameRegisters, HashMap<RegisterAddr, Data>>> for FrameBuilder {
-//     fn from(registers: HashMap<FrameRegisters, HashMap<RegisterAddr, Data>>) -> Self {
-//         let mut builder = FrameBuilder { registers };
-//         builder
-//     }
-// }
-//
-// impl From<(FrameRegisters, HashSet<RegisterAddr>)> for FrameBuilder {
-//     fn from(registers: (FrameRegisters, HashSet<RegisterAddr>)) -> Self {
-//         let (frame_reg, registers) = registers;
-//         let mut builder = FrameBuilder {
-//             registers: HashMap::new(),
-//         };
-//         builder.registers = registers.into_iter().fold(HashMap::new(), |mut acc, k| {
-//             acc.entry(frame_reg)
-//                 .or_insert(HashMap::new())
-//                 .insert(k, Data::None);
-//             acc
-//         });
-//         builder
-//     }
-// }
-//
-// impl From<HashMap<RegisterAddr, Data>> for FrameBuilder {
-//     fn from(registers: HashMap<RegisterAddr, Data>) -> Self {
-//         let mut builder = FrameBuilder {
-//             registers: HashMap::new(),
-//         };
-//         builder.registers = registers.iter().fold(HashMap::new(), |mut acc, (k, v)| {
-//             let r = match v {
-//                 Data::Int8(_) => FrameRegisters::WriteInt8,
-//                 Data::Int16(_) => FrameRegisters::WriteInt16,
-//                 Data::Int32(_) => FrameRegisters::WriteInt32,
-//                 Data::F32(_) => FrameRegisters::WriteF32,
-//                 Data::None => panic!(), //return Err(FrameError::MixedReadWrites)
-//             };
-//             acc.entry(r).or_insert(HashMap::new()).insert(*k, *v);
-//             acc
-//         });
-//         builder
-//     }
-// }
 
 #[cfg(test)]
 mod tests {
