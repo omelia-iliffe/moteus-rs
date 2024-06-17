@@ -16,7 +16,7 @@ pub struct Stop;
 
 impl From<Stop> for FrameBuilder {
     fn from(_: Stop) -> FrameBuilder {
-        Frame::builder().add([registers::Mode::write(registers::Modes::Stopped).into()])
+        Frame::builder().add_registers([registers::Mode::write(registers::Modes::Stopped).into()])
     }
 }
 
@@ -230,11 +230,11 @@ mod tests {
         let _ = c.query(1, QueryType::Default);
 
         let custom =
-            Frame::builder().add([registers::Mode::write(registers::Modes::Position).into()]);
+            Frame::builder().add_registers([registers::Mode::write(registers::Modes::Position).into()]);
         let _ = c.query(1, QueryType::Custom(custom));
 
         let custom =
-            Frame::builder().add([registers::Mode::write(registers::Modes::Position).into()]);
+            Frame::builder().add_registers([registers::Mode::write(registers::Modes::Position).into()]);
         let _ = c.query(1, QueryType::DefaultAnd(custom));
     }
 }

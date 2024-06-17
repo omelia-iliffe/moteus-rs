@@ -220,7 +220,7 @@ impl ResponseFrame {
 
 
     pub fn get_many<F: FnOnce(&ResponseFrame) -> Option<R>, R>(&self, f: F) -> Option<R> {
-        f(&self)
+        f(self)
     }
 }
 
@@ -277,10 +277,10 @@ impl FrameBuilder {
     /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
     /// use moteus::*;
     /// use registers::RegisterData;
-    /// let frame = Frame::builder().add([registers::Mode::write(registers::Modes::Position).into(), registers::CommandPosition::write(0.0).into()]).build();
+    /// let frame = Frame::builder().add_registers([registers::Mode::write(registers::Modes::Position).into(), registers::CommandPosition::write(0.0).into()]).build();
     /// # Ok(())
     /// # }
-    pub fn add<R>(self, registers: R) -> Self
+    pub fn add_registers<R>(self, registers: R) -> Self
         where
             R: IntoIterator<Item=RegisterDataStruct>,
     {
@@ -289,7 +289,7 @@ impl FrameBuilder {
     }
 
     /// Add a single register to the frame
-    pub fn add_single(mut self, reg: impl Into<RegisterDataStruct>) -> Self {
+    pub fn add_register(mut self, reg: impl Into<RegisterDataStruct>) -> Self {
         let reg = reg.into();
         let r = match (reg.resolution, reg.data.is_none()) {
             (Resolution::Int8, true) => FrameRegisters::ReadInt8,
@@ -531,7 +531,7 @@ mod tests {
     #[test]
     fn multi_subframes_into_bytes() {
         let frame: Frame = Frame::builder()
-            .add([
+            .add_registers([
                 registers::CommandPosition::write_with_resolution(1.0, Resolution::Int16).into(),
                 registers::CommandVelocity::write_with_resolution(0.0, Resolution::Int16).into(),
                 registers::CommandFeedforwardTorque::write_with_resolution(-2.0, Resolution::Int16)
