@@ -28,7 +28,7 @@ fn main() -> Result<(), moteus::Error> {
     let mut c = Controller::with_query(transport, false, qr);
     // In case the controller had faulted previously, at the start of
     // this script we send the stop command in order to clear it
-    c.send(1, moteus::frame::Stop, None).unwrap();
+    c.send_no_response(1, moteus::frame::Stop).unwrap();
 
     let elapsed = std::time::Instant::now();
 
@@ -57,8 +57,7 @@ fn main() -> Result<(), moteus::Error> {
 
         // Print out everything.
         let state = c
-            .send(1, command, Some(QueryType::Default))?
-            .expect("No response");
+            .send_with_query(1, command, QueryType::Default)?;
         // Print out just the position register.
         log::debug!("{:?}", state);
         log::info!("Position: {:?}\n", state.get::<registers::Position>());

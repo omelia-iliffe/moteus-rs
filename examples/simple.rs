@@ -18,7 +18,7 @@ fn main() -> Result<(), moteus::Error> {
     );
     // In case the controller had faulted previously, at the start of
     // this script we send the stop command to clear it.
-    c.send(1, moteus::frame::Stop, None).unwrap();
+    c.send_no_response(1, moteus::frame::Stop).unwrap();
 
     loop {
         // `set_position` accepts an optional keyword argument for each
@@ -31,8 +31,7 @@ fn main() -> Result<(), moteus::Error> {
         // It has a __repr__ method, and has a 'values' field which can
         // be used to examine individual result registers.
         let state = c
-            .send(1, moteus::frame::Position::hold(), Some(QueryType::Default))?
-            .expect("No response");
+            .send_with_query(1, moteus::frame::Position::hold(), QueryType::Default)?;
         // Print out everything.
         log::debug!("{:?}", state);
         // Print out just the position register.
