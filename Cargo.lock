@@ -161,9 +161,9 @@ dependencies = [
 
 [[package]]
 name = "fdcanusb"
-version = "0.2.0"
+version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0f3f3376e1f13f63115de4b33bee08481cbf4be4c9aabb7fe7b314b2219f7b1d"
+checksum = "972afb6f7e6cbddb3a314936fb7ae150d83d85bedea6ffa090d0aebcc1f51148"
 dependencies = [
  "hex",
  "log",
