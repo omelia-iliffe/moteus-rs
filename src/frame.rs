@@ -61,6 +61,12 @@ impl Position {
             ..Self::default()
         }
     }
+
+    /// Use a closure to config the position frame.
+    pub fn configure<F: FnOnce(&mut Self)>(mut self, f: F) -> Self {
+        f(&mut self);
+        self
+    }
 }
 
 impl IntoIterator for Position {

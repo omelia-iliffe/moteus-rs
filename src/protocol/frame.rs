@@ -217,6 +217,11 @@ impl ResponseFrame {
             .find(|reg| reg.address == register)
             .and_then(|reg| reg.as_reg::<R>().ok())
     }
+
+
+    pub fn get_many<F: FnOnce(&ResponseFrame) -> Option<R>, R>(&self, f: F) -> Option<R> {
+        f(&self)
+    }
 }
 
 impl TryFrom<CanFdFrame> for ResponseFrame {
