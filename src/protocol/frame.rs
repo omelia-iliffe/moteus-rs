@@ -218,7 +218,6 @@ impl ResponseFrame {
             .and_then(|reg| reg.as_reg::<R>().ok())
     }
 
-
     pub fn get_many<F: FnOnce(&ResponseFrame) -> Option<R>, R>(&self, f: F) -> Option<R> {
         f(self)
     }
@@ -281,8 +280,8 @@ impl FrameBuilder {
     /// # Ok(())
     /// # }
     pub fn add_registers<R>(self, registers: R) -> Self
-        where
-            R: IntoIterator<Item=RegisterDataStruct>,
+    where
+        R: IntoIterator<Item = RegisterDataStruct>,
     {
         let new = FrameBuilder::from(registers);
         self.merge(new)
@@ -359,8 +358,8 @@ impl FrameBuilder {
 }
 
 impl<R> From<R> for FrameBuilder
-    where
-        R: IntoIterator<Item=RegisterDataStruct>,
+where
+    R: IntoIterator<Item = RegisterDataStruct>,
 {
     fn from(registers: R) -> Self {
         let registers: HashMap<FrameRegisters, HashMap<RegisterAddr, RegisterDataStruct>> =
@@ -502,7 +501,7 @@ mod tests {
                     registers::Modes::Position,
                     Resolution::Int16,
                 )
-                    .into(),
+                .into(),
                 registers::Position::write_with_resolution(0.01, Resolution::Int16).into(),
                 registers::Velocity::write_with_resolution(0.1, Resolution::Int16).into(),
                 registers::Torque::write_with_resolution(-144.0, Resolution::Int16).into(),

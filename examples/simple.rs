@@ -30,8 +30,7 @@ fn main() -> Result<(), moteus::Error> {
         // The return type of 'set_position' is a moteus.Result type.
         // It has a __repr__ method, and has a 'values' field which can
         // be used to examine individual result registers.
-        let state = c
-            .send_with_query(1, moteus::frame::Position::hold(), QueryType::Default)?;
+        let state = c.send_with_query(1, moteus::frame::Position::hold(), QueryType::Default)?;
         // Print out everything.
         log::debug!("{:?}", state);
         // Print out just the position register.

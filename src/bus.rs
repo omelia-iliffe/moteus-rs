@@ -46,8 +46,8 @@ impl From<FrameParseError> for Error {
 
 /// The main struct for interacting with the Moteus.
 pub struct Controller<T>
-    where
-        T: std::io::Write + std::io::Read,
+where
+    T: std::io::Write + std::io::Read,
 {
     transport: FdCanUSB<T>,
     default_query: FrameBuilder,
@@ -82,8 +82,8 @@ impl Controller<fdcanusb::serial2::SerialPort> {
 }
 
 impl<T> Controller<T>
-    where
-        T: std::io::Write + std::io::Read,
+where
+    T: std::io::Write + std::io::Read,
 {
     /// Create a new [`Controller`] instance with a given transport.
     ///
@@ -107,8 +107,8 @@ impl<T> Controller<T>
     ///
     /// todo: add example
     pub fn with_query<F>(transport: FdCanUSB<T>, disable_brs: bool, default_query: F) -> Self
-        where
-            F: Into<FrameBuilder>,
+    where
+        F: Into<FrameBuilder>,
     {
         Controller {
             transport,
@@ -156,19 +156,19 @@ impl<T> Controller<T>
     ) -> Result<ResponseFrame, Error> {
         let frame = match query {
             QueryType::Default => frame.into().merge(self.default_query.clone()).build(),
-            QueryType::DefaultAnd(q_frame) => frame.into().merge(self.default_query.clone()).merge(q_frame).build(),
+            QueryType::DefaultAnd(q_frame) => frame
+                .into()
+                .merge(self.default_query.clone())
+                .merge(q_frame)
+                .build(),
             QueryType::Custom(q_frame) => frame.into().merge(q_frame).build(),
         };
         self.transfer_single_with_response(id, frame)
     }
 
-    fn transfer_single_no_response<F>(
-        &mut self,
-        id: u8,
-        frame: F,
-    ) -> Result<(), Error>
-        where
-            F: Into<Frame>,
+    fn transfer_single_no_response<F>(&mut self, id: u8, frame: F) -> Result<(), Error>
+    where
+        F: Into<Frame>,
     {
         let frame = frame.into();
         let arbitration_id = id as u16;
@@ -179,21 +179,13 @@ impl<T> Controller<T>
         let _ = self.transport.transfer_single(frame, false)?;
         Ok(())
     }
-    fn transfer_single_with_response<F>(
-        &mut self,
-        id: u8,
-        frame: F,
-    ) -> Result<ResponseFrame, Error>
-        where
-            F: Into<Frame>,
+    fn transfer_single_with_response<F>(&mut self, id: u8, frame: F) -> Result<ResponseFrame, Error>
+    where
+        F: Into<Frame>,
     {
         let frame = frame.into();
-        let arbitration_id =
-            id as u16 | 0x8000;
-        let frame = CanFdFrame::new(
-            arbitration_id,
-            &frame.as_bytes()?,
-        )?;
+        let arbitration_id = id as u16 | 0x8000;
+        let frame = CanFdFrame::new(arbitration_id, &frame.as_bytes()?)?;
         let response = self.transport.transfer_single(frame, true)?;
         let response = response.ok_or(Error::Io(std::io::Error::new(
             std::io::ErrorKind::Other,

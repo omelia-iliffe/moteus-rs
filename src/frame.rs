@@ -88,10 +88,10 @@ impl IntoIterator for Position {
             self.acceleration_limit.map(|a| a.into()),
             self.fixed_voltage_override.map(|f| f.into()),
         ]
-            .into_iter()
-            .flatten()
-            .collect::<Vec<registers::RegisterDataStruct>>()
-            .into_iter()
+        .into_iter()
+        .flatten()
+        .collect::<Vec<registers::RegisterDataStruct>>()
+        .into_iter()
     }
 }
 
@@ -148,8 +148,8 @@ impl Query {
 
     /// Extends the default query with extra registers.
     pub fn new_with_extra<T>(extra: T) -> Self
-        where
-            T: IntoIterator<Item=registers::RegisterDataStruct>,
+    where
+        T: IntoIterator<Item = registers::RegisterDataStruct>,
     {
         Self {
             extra: Some(extra.into_iter().collect::<Vec<_>>()),
@@ -206,10 +206,10 @@ impl IntoIterator for Query {
             self.aux1_gpio.map(|f| f.into()),
             self.aux2_gpio.map(|f| f.into()),
         ]
-            .into_iter()
-            .flatten()
-            .collect::<Vec<registers::RegisterDataStruct>>()
-            .into_iter()
+        .into_iter()
+        .flatten()
+        .collect::<Vec<registers::RegisterDataStruct>>()
+        .into_iter()
     }
 }
 
@@ -229,12 +229,12 @@ mod tests {
         );
         let _ = c.query(1, QueryType::Default);
 
-        let custom =
-            Frame::builder().add_registers([registers::Mode::write(registers::Modes::Position).into()]);
+        let custom = Frame::builder()
+            .add_registers([registers::Mode::write(registers::Modes::Position).into()]);
         let _ = c.query(1, QueryType::Custom(custom));
 
-        let custom =
-            Frame::builder().add_registers([registers::Mode::write(registers::Modes::Position).into()]);
+        let custom = Frame::builder()
+            .add_registers([registers::Mode::write(registers::Modes::Position).into()]);
         let _ = c.query(1, QueryType::DefaultAnd(custom));
     }
 }

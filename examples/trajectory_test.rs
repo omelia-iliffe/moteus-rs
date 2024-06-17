@@ -56,8 +56,7 @@ fn main() -> Result<(), moteus::Error> {
         };
 
         // Print out everything.
-        let state = c
-            .send_with_query(1, command, QueryType::Default)?;
+        let state = c.send_with_query(1, command, QueryType::Default)?;
         // Print out just the position register.
         log::debug!("{:?}", state);
         log::info!("Position: {:?}\n", state.get::<registers::Position>());

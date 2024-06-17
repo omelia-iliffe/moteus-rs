@@ -18,8 +18,8 @@ pub trait Register {
     fn address() -> RegisterAddr;
     /// Creates the register from a slice of bytes.
     fn from_bytes(bytes: &[u8], resolution: Resolution) -> Result<Self, RegisterError>
-        where
-            Self: Sized;
+    where
+        Self: Sized;
 }
 
 /// [`RegisterData`] is a trait that is implemented by the structs that represent the data that can be written to the registers.
@@ -110,17 +110,17 @@ trait TryIntoBytes {
 
 trait TryFromBytes {
     fn try_from_1_byte(byte: u8, mapping: Option<Map>) -> Result<Self, RegisterError>
-        where
-            Self: Sized;
+    where
+        Self: Sized;
     fn try_from_2_bytes(bytes: &[u8], mapping: Option<Map>) -> Result<Self, RegisterError>
-        where
-            Self: Sized;
+    where
+        Self: Sized;
     fn try_from_4_bytes(bytes: &[u8], mapping: Option<Map>) -> Result<Self, RegisterError>
-        where
-            Self: Sized;
+    where
+        Self: Sized;
     fn try_from_f32_bytes(bytes: &[u8], mapping: Option<Map>) -> Result<Self, RegisterError>
-        where
-            Self: Sized;
+    where
+        Self: Sized;
 }
 
 pub(crate) type Map = (f32, f32, f32);

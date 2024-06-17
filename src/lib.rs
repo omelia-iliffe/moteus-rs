@@ -38,4 +38,4 @@ pub use fdcanusb;
 #[cfg(feature = "serial2")]
 pub use fdcanusb::serial2;
 pub use fdcanusb::FdCanUSB;
-pub use protocol::{registers, Frame, Resolution, FrameBuilder};
+pub use protocol::{registers, Frame, FrameBuilder, Resolution};
