@@ -129,56 +129,76 @@ impl<T> Controller<T>
             QueryType::DefaultAnd(q_frame) => self.default_query.clone().merge(q_frame).build(),
             QueryType::Custom(q_frame) => q_frame.build(),
         };
-        self.transfer_single(id, frame, true).map(|r| r.expect("Expected response!"))
+        self.transfer_single_with_response(id, frame)
     }
 
-    /// Send a single frame to the moteus. If `query` is `Some`, a [`ResponseFrame`] will be returned.
-    /// If `query` is `None`, no response is expected and `Ok(None)` will be returned.
+    /// Send a single frame to the moteus. No response will be returned.
+    /// Use [`send_with_query`] to get a response.
+    pub fn send_no_response<F: Into<FrameBuilder>>(
+        &mut self,
+        id: u8,
+        frame: F,
+    ) -> Result<(), Error> {
+        let frame = frame.into().build();
+        self.transfer_single_no_response(id, frame)
+    }
+
+    /// Send a single frame to the moteus with a query. A [`ResponseFrame`] will be returned.
     /// The query frame can be set with [`QueryType`].
     /// Use [`QueryType::Default`] to use the default query frame.
     /// Use [`QueryType::DefaultAnd`] to merge the default query frame with a custom query frame.
     /// Use [`QueryType::Custom`] to use a custom query frame (without the default).
-    pub fn send<F: Into<FrameBuilder>>(
+    pub fn send_with_query<F: Into<FrameBuilder>>(
         &mut self,
         id: u8,
         frame: F,
-        query: Option<QueryType>,
-    ) -> Result<Option<ResponseFrame>, Error> {
-        let expect_response = query.is_some();
+        query: QueryType,
+    ) -> Result<ResponseFrame, Error> {
         let frame = match query {
-            None => frame.into().build(),
-            Some(QueryType::Default) => frame.into().merge(self.default_query.clone()).build(),
-            Some(QueryType::DefaultAnd(q_frame)) => frame.into().merge(self.default_query.clone()).merge(q_frame).build(),
-            Some(QueryType::Custom(q_frame)) => frame.into().merge(q_frame).build(),
+            QueryType::Default => frame.into().merge(self.default_query.clone()).build(),
+            QueryType::DefaultAnd(q_frame) => frame.into().merge(self.default_query.clone()).merge(q_frame).build(),
+            QueryType::Custom(q_frame) => frame.into().merge(q_frame).build(),
         };
-        self.transfer_single(id, frame, expect_response)
+        self.transfer_single_with_response(id, frame)
     }
 
-    fn transfer_single<F>(
+    fn transfer_single_no_response<F>(
         &mut self,
         id: u8,
         frame: F,
-        expect_response: bool,
-    ) -> Result<Option<ResponseFrame>, Error>
+    ) -> Result<(), Error>
         where
             F: Into<Frame>,
     {
         let frame = frame.into();
-        let arbitration_id = {
-            match expect_response {
-                false => id as u16,
-                true => id as u16 | 0x8000,
-            }
-        };
-        let frame = CanFdFrame::new(arbitration_id, &frame.as_bytes().expect("Could not convert frame to bytes"));
-        let response = self.transport.transfer_single(frame, expect_response)?;
-        if !expect_response {
-            return Ok(None);
-        }
+        let arbitration_id = id as u16;
+        let frame = CanFdFrame::new(
+            arbitration_id,
+            &frame.as_bytes().expect("Could not convert frame to bytes"),
+        )?;
+        let _ = self.transport.transfer_single(frame, false)?;
+        Ok(())
+    }
+    fn transfer_single_with_response<F>(
+        &mut self,
+        id: u8,
+        frame: F,
+    ) -> Result<ResponseFrame, Error>
+        where
+            F: Into<Frame>,
+    {
+        let frame = frame.into();
+        let arbitration_id =
+            id as u16 | 0x8000;
+        let frame = CanFdFrame::new(
+            arbitration_id,
+            &frame.as_bytes()?,
+        )?;
+        let response = self.transport.transfer_single(frame, true)?;
         let response = response.ok_or(Error::Io(std::io::Error::new(
             std::io::ErrorKind::Other,
             "No response",
         )))?;
-        Ok(Some(response.try_into()?))
+        Ok(response.try_into()?)
     }
 }
