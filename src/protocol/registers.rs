@@ -415,7 +415,7 @@ int_rw_register!(RegisterMapVersion: RegisterAddr::RegisterMapVersion, u32, Reso
 int_rw_register!(SerialNumber: RegisterAddr::SerialNumber, u32, Resolution::Int32);
 int_rw_register!(Rezero: RegisterAddr::Rezero, i8, Resolution::Int8);
 int_rw_register!(SetOutputExact: RegisterAddr::SetOutputExact, i8, Resolution::Int8);
-int_rw_register!(RequireReindex: RegisterAddr::RequireReindex, i8, Resolution::Int8);
+int_rw_register!(RequireReindex: RegisterAddr::RequireReindex, (), Resolution::Int8);
 
 int_rw_register!(DriverFault1: RegisterAddr::DriverFault1, u32, Resolution::Int32);
 int_rw_register!(DriverFault2: RegisterAddr::DriverFault2, u32, Resolution::Int32);
@@ -451,6 +451,35 @@ impl From<std::io::Error> for RegisterError {
     }
 }
 
+impl TryIntoBytes for () {
+    fn try_into_1_byte(self, _: Option<Map>) -> Result<u8, RegisterError> {
+        Ok(0)
+    }
+    fn try_into_2_bytes(self, _: Option<Map>) -> Result<[u8; 2], RegisterError> {
+        Ok([0, 0])
+    }
+    fn try_into_4_bytes(self, _: Option<Map>) -> Result<[u8; 4], RegisterError> {
+        Ok([0, 0, 0, 0])
+    }
+    fn try_into_f32_bytes(self, _: Option<Map>) -> Result<[u8; 4], RegisterError> {
+        Ok([0, 0, 0, 0])
+    }
+}
+
+impl TryFromBytes for () {
+    fn try_from_1_byte(_: u8, _: Option<Map>) -> Result<Self, RegisterError> {
+        Ok(())
+    }
+    fn try_from_2_bytes(_: &[u8], _: Option<Map>) -> Result<Self, RegisterError> {
+        Ok(())
+    }
+    fn try_from_4_bytes(_: &[u8], _: Option<Map>) -> Result<Self, RegisterError> {
+        Ok(())
+    }
+    fn try_from_f32_bytes(_: &[u8], _: Option<Map>) -> Result<Self, RegisterError> {
+        Ok(())
+    }
+}
 
 impl TryIntoBytes for i8 {
     fn try_into_1_byte(self, _: Option<Map>) -> Result<u8, RegisterError> {
