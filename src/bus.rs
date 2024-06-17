@@ -68,9 +68,13 @@ impl Controller<fdcanusb::serial2::SerialPort> {
     /// # Ok(())
     /// }
     /// ```
-    pub fn serial2(path: impl AsRef<std::path::Path>, serial_settings: impl moteus::serial2::IntoSettings, disable_brs: bool) -> Result<Self, std::io::Error> {
+    pub fn serial2(
+        path: impl AsRef<std::path::Path>,
+        serial_settings: impl fdcanusb::serial2::IntoSettings,
+        disable_brs: bool,
+    ) -> Result<Self, std::io::Error> {
         Ok(Self {
-            transport: FdCanUSB::open(path, fdcanusb::serial2::KeepSettings)?,
+            transport: FdCanUSB::open(path, serial_settings)?,
             default_query: crate::frame::Query::default().into(),
             disable_brs,
         })

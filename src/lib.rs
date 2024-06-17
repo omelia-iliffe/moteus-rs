@@ -34,5 +34,8 @@ pub mod frame;
 mod protocol;
 
 pub use bus::{Controller, Error};
+pub use fdcanusb;
+#[cfg(feature = "serial2")]
+pub use fdcanusb::serial2;
 pub use fdcanusb::FdCanUSB;
 pub use protocol::{registers, Frame, Resolution, FrameBuilder};
