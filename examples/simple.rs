@@ -18,23 +18,35 @@ fn main() -> Result<(), moteus::Error> {
     );
     // In case the controller had faulted previously, at the start of
     // this script we send the stop command to clear it.
-    c.send_no_response(1, moteus::frame::Stop).unwrap();
+    c.send_no_response(1, moteus::frame::Stop)?;
 
     loop {
-        // `set_position` accepts an optional keyword argument for each
-        // possible position mode register as described in the moteus
-        // reference manual.  If a given register is omitted, then that
-        // register is omitted from the command itself, with semantics
-        // as described in the reference manual.
+        // moteus::frame::Position has a number of helper methods
+        // which return predefined position commands.  Here we use
+        // the `hold` method to create a command which will hold the
+        // current position of the controller.
         //
-        // The return type of 'set_position' is a moteus.Result type.
-        // It has a __repr__ method, and has a 'values' field which can
-        // be used to examine individual result registers.
+
+        // The first argument to `send_with_query` is the id of the
+        // controller to send the command to.  The second argument is
+        // the command to send.  The third argument is the query type
+        // to use.  The query type can be one of `QueryType::Default`,
+        // `QueryType::DefaultAnd`, or `QueryType::Custom`. This sets
+        // which registers are returned in the response.
+        //
+        // The `send_with_query` method sends a command to the controller
+        // and waits for a response. A `ResponseFrame` is returned which
+        // contains the values of the registers requested in the query type.
         let state = c.send_with_query(1, moteus::frame::Position::hold(), QueryType::Default)?;
         // Print out everything.
         log::debug!("{:?}", state);
-        // Print out just the position register.
-        log::info!("Position: {:?}\n", state.get::<registers::Position>());
+
+        // To retrieve the values of the registers from the `ResponseFrame`,
+        // use the `get` method with the register type as the type parameter.
+        // The `get` method returns a `Option` as the register may not be present
+        // in the `ResponseFrame`.
+        let pos = state.get::<registers::Position>();
+        log::info!("Position: {:?}\n", pos);
 
         // Wait 20ms between iterations.  By default, when commanded
         // over CAN, there is a watchdog which requires commands to be

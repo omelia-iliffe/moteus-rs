@@ -7,7 +7,7 @@
 //!
 use moteus::frame::{Query, QueryType};
 use moteus::registers::*;
-use moteus::{registers, Controller};
+use moteus::Controller;
 
 fn main() -> Result<(), moteus::Error> {
     env_logger::Builder::from_default_env().init();
@@ -20,11 +20,10 @@ fn main() -> Result<(), moteus::Error> {
         ControlVelocityError::read().into(),
         ControlTorqueError::read().into(),
     ]);
-    // By default, Controller connects to id 1, and picks an arbitrary
-    // CAN-FD transport, prefering an attached fdcanusb if available
+
     let mut transport =
         fdcanusb::FdCanUSB::open("/dev/fdcanusb", fdcanusb::serial2::KeepSettings).unwrap();
-    transport.flush().unwrap();
+    transport.flush()?;
     let mut c = Controller::with_query(transport, false, qr);
     // In case the controller had faulted previously, at the start of
     // this script we send the stop command in order to clear it
@@ -33,39 +32,41 @@ fn main() -> Result<(), moteus::Error> {
     let elapsed = std::time::Instant::now();
 
     loop {
-        // `set_position` accepts an optional keyword argument for each
-        // possible position mode register as described in the moteus
-        // reference manual.  If a given register is omitted, then that
-        // register is omitted from the command itself, with semantics
-        // as described in the reference manual.
-        //
-        // The return type of 'set_position' is a moteus.Result type.
-        // It has a __repr__ method, and has a 'values' field which can
-        // be used to examine individual result registers.
+        // moteus::frame::Position can be constructed with the registers
+        // you would like to write. Here we alternate between commanding
+        // the motor to -0.5 and 0.5 radians every 2 seconds.
         let position = if elapsed.elapsed().as_secs() % 2 == 0 {
-            Some(CommandPosition::write(-0.5))
+            CommandPosition::write(-0.5)
         } else {
-            Some(CommandPosition::write(0.5))
+            CommandPosition::write(0.5)
         };
         let command = moteus::frame::Position {
-            position,
+            position: Some(position),
             velocity: Some(CommandVelocity::write(0.0)),
             velocity_limit: Some(VelocityLimit::write(8.0)),
             acceleration_limit: Some(AccelerationLimit::write(3.0)),
             ..Default::default()
         };
 
-        // Print out everything.
+        // The first argument to `send_with_query` is the id of the
+        // controller to send the command to.  The second argument is
+        // the command to send.  The third argument is the query type
+        // to use.  The query type can be one of `QueryType::Default`,
+        // `QueryType::DefaultAnd`, or `QueryType::Custom`. This sets
+        // which registers are returned in the response.
+        //
+        // The `send_with_query` method sends a command to the controller
+        // and waits for a response. A `ResponseFrame` is returned which
+        // contains the values of the registers requested in the query type
         let state = c.send_with_query(1, command, QueryType::Default)?;
         // Print out just the position register.
         log::debug!("{:?}", state);
-        log::info!("Position: {:?}\n", state.get::<registers::Position>());
+        log::info!("Position: {:?}\n", state.get::<Position>());
 
         // Wait 20ms between iterations.  By default, when commanded
         // over CAN, there is a watchdog which requires commands to be
         // sent at least every 100ms or the controller will enter a
         // latched fault state
         std::thread::sleep(std::time::Duration::from_millis(20));
-        // }
     }
 }
