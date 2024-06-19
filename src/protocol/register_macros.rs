@@ -117,7 +117,7 @@ macro_rules! map_rw_register {
     ($reg:ident : $addr:expr, $mapping:expr) => {
         #[derive(Clone, Debug, PartialEq)]
         #[doc = concat!("Struct representing the ",stringify!($reg)," register at ",stringify!($addr)," .")]
-        #[doc = concat!(stringify!($reg)," uses [`", stringify!($mapping), "`] to map between different resolutions")]
+        #[doc = concat!(stringify!($reg)," uses `", stringify!($mapping), "` to map between different resolutions")]
         pub struct $reg {
             value: Option<f32>,
             resolution: Resolution,

@@ -188,6 +188,9 @@ impl SubFrame {
     }
 }
 
+/// A response frame is a collection of registers returned from the Moteus Controller.
+/// The registers can be accessed by their type using the `get` method.
+/// Many registers can be accessed at once using the `get_many` method.
 #[derive(Debug, PartialEq)]
 pub struct ResponseFrame(Vec<RegisterDataStruct>);
 
@@ -210,6 +213,8 @@ impl ResponseFrame {
         Ok(ResponseFrame(results))
     }
 
+    /// Get a register from the response frame
+    /// If the register `R` is not found in the response frame [`None`] is returned.
     pub fn get<R: Register>(&self) -> Option<R> {
         let register = R::address();
         self.0
@@ -218,6 +223,8 @@ impl ResponseFrame {
             .and_then(|reg| reg.as_reg::<R>().ok())
     }
 
+    /// Get many registers from the response frame
+    /// If any of the registers are not found in the response frame [`None`] is returned.
     pub fn get_many<F: FnOnce(&ResponseFrame) -> Option<R>, R>(&self, f: F) -> Option<R> {
         f(self)
     }

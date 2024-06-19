@@ -83,7 +83,7 @@ impl std::fmt::Debug for RegisterDataStruct {
 pub type Varuint = Vec<u8>;
 
 impl RegisterAddr {
-    /// Converts the address to a [`varuint`]
+    /// Converts the address to a [`Varuint`]
     pub fn address_as_bytes(&self) -> Varuint {
         let mut buf = Vec::new();
         let mut val = *self as u16;
@@ -137,11 +137,11 @@ pub(crate) const TEMPERATURE_MAP: Map = (1.0, 0.1, 0.001);
 pub(crate) const TIME_MAP: Map = (0.01, 0.001, 0.000001);
 pub(crate) const CURRENT_MAP: Map = (1.0, 0.1, 0.001);
 
-/// [`FrameRegister`]s are used to specify the type of data that is being written to or read from a register.
-/// Some, like [`ReplyInt8`] and [`WriteError`], are only returned in responses.
-/// Others, like [`WriteInt16`] and [`ReadF32`], are used when sending frame.
+/// [`FrameRegisters`] are used to specify the type of data that is being written to or read from a register.
+/// Some, like [`FrameRegisters::ReplyInt8`] and [`FrameRegisters::WriteError`], are only returned in responses.
+/// Others, like [`FrameRegisters::WriteInt16`] and [`FrameRegisters::ReadF32`], are used when sending frame.
 ///
-/// The number of values can be encoded into the 2 Least Significant bits of the [`FrameRegister`]
+/// The number of values can be encoded into the 2 Least Significant bits of the [`FrameRegisters`]
 #[allow(missing_docs)]
 #[derive(Debug, Clone, Copy, FromPrimitive, PartialEq, Eq, AsBytes, Hash)]
 #[repr(u8)]
@@ -206,7 +206,7 @@ impl FrameRegisters {
     }
 }
 
-/// Each register of the moteus board has an address which can be encoded as a [`varuint`]
+/// Each register of the moteus board has an address which can be encoded as a [`Varuint`]
 #[derive(Debug, Clone, Copy, AsBytes, FromPrimitive, PartialEq, Eq, Hash)]
 #[allow(missing_docs)]
 #[repr(u16)]
@@ -929,36 +929,36 @@ mod tests {
         let data = Position::write_with_resolution(2.0, Resolution::Int16)
             .as_bytes()
             .unwrap();
-        assert_eq!(data, (20000i16.to_le_bytes().to_vec()));
+        assert_eq!(data, 20000i16.to_le_bytes().to_vec());
         let data = Position::write_with_resolution(2.0, Resolution::Int32)
             .as_bytes()
             .unwrap();
-        assert_eq!(data, (200000i32.to_le_bytes().to_vec()));
+        assert_eq!(data, 200000i32.to_le_bytes().to_vec());
         let data = Position::write_with_resolution(2.0, Resolution::Float)
             .as_bytes()
             .unwrap();
-        assert_eq!(data, (2.0f32.to_le_bytes().to_vec()));
+        assert_eq!(data, 2.0f32.to_le_bytes().to_vec());
 
         let position = Position::write(-2.0);
         let data = position.as_bytes().unwrap();
-        assert_eq!(data, (vec![0, 0, 0, 192]));
+        assert_eq!(data, vec![0, 0, 0, 192]);
         let from_data = Position::from_bytes(&data, Resolution::Float).unwrap();
-        assert_eq!(from_data, (Position::write(-2.0)));
+        assert_eq!(from_data, Position::write(-2.0));
 
         let data = Position::write_with_resolution(-2.0, Resolution::Int8).as_bytes();
         assert!(data.is_err()); // OVERFLOW
         let data = Position::write_with_resolution(-2.0, Resolution::Int16)
             .as_bytes()
             .unwrap();
-        assert_eq!(data, ((-20000i16).to_le_bytes().to_vec()));
+        assert_eq!(data, (-20000i16).to_le_bytes().to_vec());
         let data = Position::write_with_resolution(-2.0, Resolution::Int32)
             .as_bytes()
             .unwrap();
-        assert_eq!(data, ((-200000i32).to_le_bytes().to_vec()));
+        assert_eq!(data, (-200000i32).to_le_bytes().to_vec());
         let data = Position::write_with_resolution(-2.0, Resolution::Float)
             .as_bytes()
             .unwrap();
-        assert_eq!(data, ((-2.0f32).to_le_bytes().to_vec()));
+        assert_eq!(data, (-2.0f32).to_le_bytes().to_vec());
     }
 
     #[test]
@@ -966,17 +966,17 @@ mod tests {
         let data = Mode::write_with_resolution(Modes::Voltage, Resolution::Int8)
             .as_bytes()
             .unwrap();
-        assert_eq!(data, (vec![6]));
+        assert_eq!(data, vec![6]);
         let data = Mode::from_bytes(&data, Resolution::Int8).unwrap();
-        assert_eq!(data, (Mode::write(Modes::Voltage)));
+        assert_eq!(data, Mode::write(Modes::Voltage));
         let data = Mode::write_with_resolution(Modes::Voltage, Resolution::Int16)
             .as_bytes()
             .unwrap();
-        assert_eq!(data, ([6, 0].to_vec()));
+        assert_eq!(data, [6, 0].to_vec());
         let data = Mode::write_with_resolution(Modes::Voltage, Resolution::Int32)
             .as_bytes()
             .unwrap();
-        assert_eq!(data, ([6, 0, 0, 0].to_vec()));
+        assert_eq!(data, [6, 0, 0, 0].to_vec());
         let data = Mode::write_with_resolution(Modes::Voltage, Resolution::Float).as_bytes();
         assert!(data.is_err()); // IntAsFloat
     }

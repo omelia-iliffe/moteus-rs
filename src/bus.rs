@@ -133,7 +133,7 @@ where
     }
 
     /// Send a single frame to the moteus. No response will be returned.
-    /// Use [`send_with_query`] to get a response.
+    /// Use [`Controller::send_with_query`] to get a response.
     pub fn send_no_response<F: Into<FrameBuilder>>(
         &mut self,
         id: u8,

@@ -98,9 +98,9 @@ impl IntoIterator for Position {
 /// Specify which query is merged into the frame being sent.
 #[derive(Debug, Clone)]
 pub enum QueryType {
-    /// Sends the [`Controller`]s default query.
+    /// Sends the [`crate::Controller`]s default query.
     Default,
-    /// Sends the [`Controller`]s default query, merged with the provided [`FrameBuilder`].
+    /// Sends the [`crate::Controller`]s default query, merged with the provided [`FrameBuilder`].
     DefaultAnd(FrameBuilder),
     /// Sends the provided [`FrameBuilder`].
     Custom(FrameBuilder),
