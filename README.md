@@ -9,3 +9,11 @@ the [fdcanusb](https://crates.io/crates/fdcanusb) crate.
 This crate is a work in progress but most features are implemented.
 Feedback is very welcome.
 
+## Resources
+
+This library was developed based on the existing python and cpp libraries provided by mjbots,
+found [here](https://github.com/mjbots/moteus/tree/main/lib)
+
+The getting_started and reference docs are also very helpful and can be
+found [here](https://github.com/mjbots/moteus/tree/main/docs)
+
