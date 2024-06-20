@@ -1,10 +1,5 @@
-//! [`Frame`]s are high-level structs used to format read registers and write registers with data into CAN-FD frames.
-//!
-//! [`FrameBuilder`] is provided to make creating [`Frame`]s easier.
-//!
-//! Many structs are provided to make creating [`Frame`]s easier.
-//! For example, [`Position`] is used to create a frame to set the position of a motor.
-//! These structs can be converted into a [`FrameBuilder`] using the `From` and `Into` traits.
+//! This module contain structs which can be used to build common frames, such as [`Stop`] and [`Position`]
+//! each impl Into<[`FrameBuilder`]> and can be passed into functions such as [`crate::Controller::send_with_query`].
 
 use crate::protocol::{Frame, FrameBuilder};
 use crate::registers::RegisterData;

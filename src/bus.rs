@@ -162,7 +162,8 @@ where
         self.transfer_single_no_response(id, frame)
     }
 
-    /// Send a single frame to the moteus with a query. A [`ResponseFrame`] will be returned.
+    /// Sends a single frame with a query to the moteus and returns a [`ResponseFrame`].
+    ///
     /// The query frame can be set with [`QueryType`].
     /// Use [`QueryType::Default`] to use the default query frame.
     /// Use [`QueryType::DefaultAnd`] to merge the default query frame with a custom query frame.
