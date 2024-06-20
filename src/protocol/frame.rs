@@ -57,15 +57,7 @@ impl SubFrame {
         self.data.push(register);
         Ok(())
     }
-    // pub fn add_write<T>(&mut self, register: RegisterAddr, value: T) -> Result<(), FrameError>
-    //     where
-    //         T: Into<Data>,
-    // {
-    //     self.add(register, value.into())
-    // }
-    // pub fn add_read(&mut self, register: RegisterAddr) -> Result<(), FrameError> {
-    //     self.add(register, Data::None)
-    // }
+
     pub(crate) fn as_bytes(&self) -> Result<Vec<u8>, FrameError> {
         let mut buf = Vec::with_capacity(64); //TODO: SWAP WITH SUB FRAME BUF TO AVOID ALLOCATING
         if self.len < 4 {
@@ -243,6 +235,18 @@ pub struct FrameBuilder {
 }
 
 impl FrameBuilder {
+    fn frame_register(resolution: Resolution, read: bool) -> FrameRegisters {
+        match (resolution, read) {
+            (Resolution::Int8, true) => FrameRegisters::ReadInt8,
+            (Resolution::Int16, true) => FrameRegisters::ReadInt16,
+            (Resolution::Int32, true) => FrameRegisters::ReadInt32,
+            (Resolution::Float, true) => FrameRegisters::ReadF32,
+            (Resolution::Int8, false) => FrameRegisters::WriteInt8,
+            (Resolution::Int16, false) => FrameRegisters::WriteInt16,
+            (Resolution::Int32, false) => FrameRegisters::WriteInt32,
+            (Resolution::Float, false) => FrameRegisters::WriteF32,
+        }
+    }
     /// Add multiple register to the frame
     ///
     /// ### Example
@@ -264,16 +268,7 @@ impl FrameBuilder {
     /// Add a single register to the frame
     pub fn add_register(mut self, reg: impl Into<RegisterDataStruct>) -> Self {
         let reg = reg.into();
-        let r = match (reg.resolution, reg.data.is_none()) {
-            (Resolution::Int8, true) => FrameRegisters::ReadInt8,
-            (Resolution::Int16, true) => FrameRegisters::ReadInt16,
-            (Resolution::Int32, true) => FrameRegisters::ReadInt32,
-            (Resolution::Float, true) => FrameRegisters::ReadF32,
-            (Resolution::Int8, false) => FrameRegisters::WriteInt8,
-            (Resolution::Int16, false) => FrameRegisters::WriteInt16,
-            (Resolution::Int32, false) => FrameRegisters::WriteInt32,
-            (Resolution::Float, false) => FrameRegisters::WriteF32,
-        };
+        let r = FrameBuilder::frame_register(reg.resolution, reg.data.is_none());
         let _ = self
             .registers
             .entry(r)
@@ -338,16 +333,7 @@ where
     fn from(registers: R) -> Self {
         let registers: HashMap<FrameRegisters, HashMap<RegisterAddr, RegisterDataStruct>> =
             registers.into_iter().fold(HashMap::new(), |mut acc, reg| {
-                let r = match (reg.resolution, reg.data.is_none()) {
-                    (Resolution::Int8, true) => FrameRegisters::ReadInt8,
-                    (Resolution::Int16, true) => FrameRegisters::ReadInt16,
-                    (Resolution::Int32, true) => FrameRegisters::ReadInt32,
-                    (Resolution::Float, true) => FrameRegisters::ReadF32,
-                    (Resolution::Int8, false) => FrameRegisters::WriteInt8,
-                    (Resolution::Int16, false) => FrameRegisters::WriteInt16,
-                    (Resolution::Int32, false) => FrameRegisters::WriteInt32,
-                    (Resolution::Float, false) => FrameRegisters::WriteF32,
-                };
+                let r = FrameBuilder::frame_register(reg.resolution, reg.data.is_none());
                 let _ = acc.entry(r).or_default().insert(reg.address, reg);
 
                 acc
