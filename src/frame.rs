@@ -50,7 +50,6 @@ pub struct Position {
     pub acceleration_limit: Option<registers::AccelerationLimit>,
     /// The `fixed_voltage_override` field is used to set the [`registers::FixedVoltage`] of the motor.
     pub fixed_voltage_override: Option<registers::FixedVoltage>,
-    // todo: add query override
 }
 
 impl Position {

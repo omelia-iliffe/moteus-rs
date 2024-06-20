@@ -127,7 +127,7 @@ impl SubFrame {
         let data = {
             let mut data = Vec::new();
             for (reg_index, i) in (start..end).step_by(index_step).enumerate() {
-                let reg_addr = (initial_reg + reg_index as u8) as u16; //TODO: no bad u8 must be u16
+                let reg_addr = initial_reg as u16 + reg_index as u16;
                 let res = frame_register.resolution().ok_or(std::io::Error::new(
                     std::io::ErrorKind::InvalidData,
                     format!("Expected a Reply FrameRegister, got {:?}", frame_register),
@@ -141,39 +141,6 @@ impl SubFrame {
                         )
                     })?;
                 data.push(reg);
-                //
-                // let value = match frame_register {
-                //     FrameRegisters::ReplyInt8 => Data::Int8(i8::from_le_bytes(
-                //         buf[i..i + index_step].try_into().unwrap(),
-                //     )),
-                //     FrameRegisters::ReplyInt16 => Data::Int16(i16::from_le_bytes(
-                //         buf[i..i + index_step].try_into().unwrap(),
-                //     )),
-                //     FrameRegisters::ReplyInt32 => Data::Int32(i32::from_le_bytes(
-                //         buf[i..i + index_step].try_into().unwrap(),
-                //     )),
-                //     FrameRegisters::ReplyF32 => Data::F32(f32::from_le_bytes(
-                //         buf[i..i + index_step].try_into().unwrap(),
-                //     )),
-                //     _ => {
-                //         return Err(std::io::Error::new(
-                //             std::io::ErrorKind::InvalidData,
-                //             format!("Expected a Reply FrameRegister, got {:?}", frame_register),
-                //         ));
-                //     }
-                // };
-                // data.push((
-                //     // RegisterAddr::from_u8(initial_reg + reg_index as u8).ok_or(
-                //     //     std::io::Error::new(
-                //     //         std::io::ErrorKind::InvalidData,
-                //     //         format!(
-                //     //             "Unable to parse register from {}",
-                //     //             initial_reg + reg_index as u8
-                //     //         ),
-                //     //     ),
-                //     // )?,
-                //     value,
-                // ));
             }
             data
         };

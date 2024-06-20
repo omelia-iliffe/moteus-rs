@@ -8,7 +8,6 @@ repository = "https://github.com/omelia-iliffe/moteus-rs"
 
 [dependencies]
 hex = "0.4.3"
-#fdcanusb = { git = "https://github.com/omelia-iliffe/fdcanusb-rs", default-features = false }
 fdcanusb = { version = "0.3.0", default-features = false }
 byteorder = "1.5.0"
 zerocopy = { version = "0.7.32", features = ["derive"] }

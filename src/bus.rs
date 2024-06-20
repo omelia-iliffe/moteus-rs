@@ -106,6 +106,25 @@ where
     /// Creates a new [`Controller`] instance with a custom default query.
     ///
     /// todo: add example
+    /// ```rust
+    /// # use moteus::frame::Query;
+    /// # use moteus::registers::*;
+    /// # use moteus::Controller;
+    /// # fn main() -> Result<(), moteus::Error> {
+    /// let qr = Query::new_with_extra([
+    ///     ControlPosition::read().into(),
+    ///     ControlVelocity::read().into(),
+    ///     ControlTorque::read().into(),
+    ///     ControlPositionError::read().into(),
+    ///     ControlVelocityError::read().into(),
+    ///     ControlTorqueError::read().into(),
+    /// ]);
+    /// let mut transport = fdcanusb::FdCanUSB::open("/dev/fdcanusb", fdcanusb::serial2::KeepSettings)?;
+    /// transport.flush()?;
+    /// let mut c = Controller::with_query(transport, false, qr);
+    /// # Ok(())
+    /// # }
+    /// ```
     pub fn with_query<F>(transport: FdCanUSB<T>, disable_brs: bool, default_query: F) -> Self
     where
         F: Into<FrameBuilder>,

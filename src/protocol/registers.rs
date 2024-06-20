@@ -125,7 +125,7 @@ macro_rules! int_rw_register {
 }
 
 /// Used to define a register with f32 as the representation.
-/// These registers using a [`Map`] to convert to different resolutions
+/// These registers using a `Map` to convert to different resolutions
 #[macro_export]
 macro_rules! map_rw_register {
     ($reg:ident : $addr:expr, $mapping:expr) => {
@@ -273,7 +273,6 @@ pub trait RegisterData<T> {
 /// A struct that represents the raw data (as `Vec<u8>`) that has been read from, or will be written to, a register
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub struct RegisterDataStruct {
-    // TODO: Rename me
     /// The [`RegisterAddr`] of the register
     pub address: RegisterAddr,
     /// The [`Resolution`] of the data
