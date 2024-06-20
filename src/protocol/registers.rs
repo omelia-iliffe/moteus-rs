@@ -13,7 +13,6 @@ use zerocopy::AsBytes;
 use crate::Resolution;
 
 /// Used to define a register with Integers as the representation
-#[macro_export]
 macro_rules! int_rw_register {
     ($reg:ident : $addr:expr, $type:ty, $res:expr) => {
         #[doc = concat!("Struct representing the ",stringify!($reg)," register at ",stringify!($addr)," .")]
@@ -126,7 +125,6 @@ macro_rules! int_rw_register {
 
 /// Used to define a register with f32 as the representation.
 /// These registers using a `Map` to convert to different resolutions
-#[macro_export]
 macro_rules! map_rw_register {
     ($reg:ident : $addr:expr, $mapping:expr) => {
         #[derive(Clone, Debug, PartialEq)]
