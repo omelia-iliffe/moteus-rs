@@ -1,33 +1,12 @@
 use std::collections::HashMap;
 
+use crate::error::FrameError;
+use crate::protocol::registers::{FrameRegisters, RegisterDataStruct};
+use crate::registers::{Register, RegisterAddr};
+use crate::{FrameParseError, Resolution};
 use fdcanusb::CanFdFrame;
 use itertools::Itertools;
 use num_traits::FromPrimitive;
-
-use crate::protocol::registers::{FrameRegisters, RegisterDataStruct, RegisterError};
-use crate::registers::{Register, RegisterAddr};
-use crate::Resolution;
-
-#[derive(Debug)]
-pub enum FrameError {
-    NonSequentialRegisters,
-    EmptySubFrame,
-    MixedReadWrites,
-    RegisterError(RegisterError),
-}
-
-impl From<RegisterError> for FrameError {
-    fn from(e: RegisterError) -> Self {
-        FrameError::RegisterError(e)
-    }
-}
-
-#[derive(Debug, PartialEq, Eq)]
-pub enum FrameParseError {
-    SubFrameRegister,
-    SubFrameLength,
-    Register,
-}
 
 #[derive(Debug, PartialEq)]
 pub struct SubFrame {
@@ -50,6 +29,7 @@ impl SubFrame {
             if (prev_reg.address as u16) + 1 != register.address as u16 {
                 return Err(FrameError::NonSequentialRegisters);
             }
+            // TODO: this code does nothing? Im not sure what happened here. Impl a check to see if the register is read or write.
             if register.data.is_none() != register.data.is_none() {
                 return Err(FrameError::MixedReadWrites);
             }
@@ -79,15 +59,13 @@ impl SubFrame {
     }
 
     /// Return the parsed subframe and the number of bytes consumed
-    pub(crate) fn from_bytes(buf: &[u8]) -> std::io::Result<(Option<Self>, usize)> {
+    pub(crate) fn from_bytes(buf: &[u8]) -> Result<(Option<Self>, usize), FrameParseError> {
         if buf.is_empty() {
             return Ok((None, 0));
         }
-        let frame_register =
-            FrameRegisters::from_u8(buf[0] & (0xFF - 0x03)).ok_or(std::io::Error::new(
-                std::io::ErrorKind::InvalidData,
-                format!("Unknown FrameRegister {}", buf[0] & (0xFF - 0x03)),
-            ))?;
+        let frame_register = buf[0] & (0xFF - 0x03);
+        let frame_register = FrameRegisters::from_u8(frame_register)
+            .ok_or(FrameParseError::InvalidFrameRegister(frame_register))?;
         if frame_register == FrameRegisters::Nop {
             return Ok((None, 1));
         }
@@ -101,11 +79,11 @@ impl SubFrame {
             }
         };
         let initial_reg = buf[1 + len_offset];
-        let index_step = frame_register.size().ok_or(std::io::Error::new(
-            std::io::ErrorKind::InvalidData,
-            format!("Expected a Reply FrameRegister, got {:?}", frame_register),
-        ))?;
-
+        // todo! added support for read/write error frame registers
+        let resolution = frame_register
+            .resolution()
+            .ok_or(FrameParseError::UnsupportedSubframeRegister(frame_register))?;
+        let index_step = resolution.size();
         let start = 2 + len_offset;
         let end = {
             match frame_register {
@@ -120,18 +98,9 @@ impl SubFrame {
             let mut data = Vec::new();
             for (reg_index, i) in (start..end).step_by(index_step).enumerate() {
                 let reg_addr = initial_reg as u16 + reg_index as u16;
-                let res = frame_register.resolution().ok_or(std::io::Error::new(
-                    std::io::ErrorKind::InvalidData,
-                    format!("Expected a Reply FrameRegister, got {:?}", frame_register),
-                ))?;
 
-                let reg = RegisterDataStruct::from_bytes(reg_addr, &buf[i..i + index_step], res)
-                    .map_err(|e| {
-                        std::io::Error::new(
-                            std::io::ErrorKind::InvalidData,
-                            format!("Unable to parse register from {}: {:?}", reg_addr, e),
-                        )
-                    })?;
+                let reg =
+                    RegisterDataStruct::from_bytes(reg_addr, &buf[i..i + index_step], resolution)?;
                 data.push(reg);
             }
             data
@@ -154,7 +123,7 @@ impl SubFrame {
 pub struct ResponseFrame(Vec<RegisterDataStruct>);
 
 impl ResponseFrame {
-    pub(crate) fn from_bytes(buf: &[u8]) -> std::io::Result<ResponseFrame> {
+    pub(crate) fn from_bytes(buf: &[u8]) -> Result<ResponseFrame, FrameParseError> {
         let mut results = Vec::new();
         let mut buf = buf;
         loop {
@@ -190,7 +159,7 @@ impl ResponseFrame {
 }
 
 impl TryFrom<CanFdFrame> for ResponseFrame {
-    type Error = std::io::Error;
+    type Error = FrameParseError;
 
     fn try_from(frame: CanFdFrame) -> Result<Self, Self::Error> {
         let buf = frame.data;

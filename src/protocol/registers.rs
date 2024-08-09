@@ -5,12 +5,11 @@
 //!
 //! This module contains the register structs as well as trait interfaces and register types (such as [`Modes`] and [`HomeStates`]).
 
+use crate::{RegisterError, Resolution};
 use byteorder::{ReadBytesExt, LE};
 use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
 use zerocopy::AsBytes;
-
-use crate::Resolution;
 
 /// Used to define a register with Integers as the representation
 macro_rules! int_rw_register {
@@ -425,16 +424,6 @@ impl FrameRegisters {
         };
         Some(r)
     }
-    /// Returns the number of bytes for the register
-    pub fn size(&self) -> Option<usize> {
-        let size = match self.resolution()? {
-            Resolution::Int8 => 1,
-            Resolution::Int16 => 2,
-            Resolution::Int32 => 4,
-            Resolution::Float => 4,
-        };
-        Some(size)
-    }
 }
 
 /// Each register of the moteus board has an address which can be encoded as a [`Varuint`]
@@ -650,37 +639,6 @@ int_rw_register!(RequireReindex: RegisterAddr::RequireReindex, (), Resolution::I
 
 int_rw_register!(DriverFault1: RegisterAddr::DriverFault1, u32, Resolution::Int32);
 int_rw_register!(DriverFault2: RegisterAddr::DriverFault2, u32, Resolution::Int32);
-
-/// Errors that can occur when writing and/or parsing registers
-#[allow(missing_docs)]
-#[derive(Debug)]
-pub enum RegisterError {
-    /// Returned when the value is too large to fit in the register
-    Overflow,
-    /// Returned when data is tried into a type that is not valid.
-    /// For example, `0x50` -> [`Modes`] is invalid and returns [`RegisterError::InvalidData`]
-    // ```rust
-    // use moteus::registers::{Modes, RegisterError};
-    // let err = Modes::try_from_1_byte(0x50, None).unwrap_err();
-    // assert_eq!(err, RegisterError::InvalidData);
-    // ```
-    InvalidData,
-    /// Returned when the parsed address of a register is invalid. All valid addresses are defined in the [`RegisterAddr`] enum, so this shouldn't happen.
-    InvalidAddress,
-    /// Returned when a float is tried to be written to a register that only accepts integers
-    IntAsFloat,
-    IO(std::io::Error),
-    /// Returned when there is no mapping for the register
-    NoMapping,
-    /// Returned when writing is attempted with a register instance that doesn't have any data.
-    NoData,
-}
-
-impl From<std::io::Error> for RegisterError {
-    fn from(e: std::io::Error) -> Self {
-        RegisterError::IO(e)
-    }
-}
 
 impl TryIntoBytes for () {
     fn try_into_1_byte(self, _: Option<Map>) -> Result<u8, RegisterError> {

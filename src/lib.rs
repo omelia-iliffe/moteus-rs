@@ -9,7 +9,6 @@ no_mangle_generic_items,
 overflowing_literals,
 path_statements,
 patterns_in_fns_without_body,
-// private_in_public,
 unconditional_recursion,
 unused,
 unused_allocation,
@@ -30,10 +29,12 @@ unused_results
 #![warn(clippy::unwrap_used)]
 
 mod bus;
+mod error;
 pub mod frame;
 mod protocol;
 
-pub use bus::{Controller, Error};
+pub use bus::Controller;
+pub use error::*;
 pub use fdcanusb;
 #[cfg(feature = "serial2")]
 pub use fdcanusb::serial2;
