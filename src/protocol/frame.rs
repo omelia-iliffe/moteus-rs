@@ -315,7 +315,7 @@ where
 mod tests {
     use super::*;
     use crate::protocol::registers;
-    use crate::registers::{Faults, RegisterData};
+    use crate::registers::Faults;
 
     #[test]
     fn test_write_u8_subframe() {
