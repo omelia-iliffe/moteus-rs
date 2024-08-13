@@ -13,16 +13,7 @@ use zerocopy::AsBytes;
 
 /// Used to define a register with Integers as the representation
 macro_rules! int_rw_register {
-    ($reg:ident : $addr:expr, $type:ty, $res:expr) => {
-        #[doc = concat!("Struct representing the ",stringify!($reg)," register at ",stringify!($addr)," .")]
-        #[doc = concat!(stringify!($reg)," can be represented as larger ints but not floats or smaller ints")]
-        #[derive(Clone, Debug, PartialEq)]
-        pub struct $reg {
-            /// The value of the register
-            pub value: Option<$type>,
-            /// The resolution of the value
-            pub resolution: Resolution,
-        }
+    (@IMPL_REG, $reg:ident : $addr:expr, $type:ty, $res:expr) => {
         impl $reg {
             /// If the instance has a value, return it. Otherwise, return None
             pub fn value(&self) -> Option<$type> {
@@ -33,17 +24,7 @@ macro_rules! int_rw_register {
             pub fn resolution(&self) -> Resolution {
                 self.resolution
             }
-            fn as_bytes(&self) -> Result<Vec<u8>, RegisterError> {
-                let Some(value) = self.value else {
-                    return Err(RegisterError::NoData);
-                };
-                match self.resolution {
-                    Resolution::Int8 => value.try_into_1_byte().map(|x| vec![x]),
-                    Resolution::Int16 => value.try_into_2_bytes().map(|x| x.to_vec()),
-                    Resolution::Int32 => value.try_into_4_bytes().map(|x| x.to_vec()),
-                    Resolution::Float => value.try_into_f32_bytes().map(|x| x.to_vec()),
-                }
-            }
+
             /// Each struct has a default [`Resolution`] that is used when writing to the register.
             const DEFAULT_RESOLUTION: Resolution = $res;
 
@@ -76,6 +57,23 @@ macro_rules! int_rw_register {
                 }
             }
         }
+    };
+    (@IMPL_REG_AS_BYTES, $reg:ident) => {
+        impl $reg {
+            fn as_bytes(&self) -> Result<Vec<u8>, RegisterError> {
+                let Some(value) = self.value else {
+                    return Err(RegisterError::NoData);
+                };
+                match self.resolution {
+                    Resolution::Int8 => value.try_into_1_byte().map(|x| vec![x]),
+                    Resolution::Int16 => value.try_into_2_bytes().map(|x| x.to_vec()),
+                    Resolution::Int32 => value.try_into_4_bytes().map(|x| x.to_vec()),
+                    Resolution::Float => value.try_into_f32_bytes().map(|x| x.to_vec()),
+                }
+            }
+        }
+    };
+    (@FROM_DATA_STRUCT, $reg:ident : $type:ty) => {
         impl From<$reg> for RegisterDataStruct {
             fn from(reg: $reg) -> RegisterDataStruct {
                 if let Ok(data) = reg.as_bytes() {
@@ -93,6 +91,8 @@ macro_rules! int_rw_register {
                 }
             }
         }
+    };
+    (@IMPL_REGISTER, $reg:ident : $addr:expr, $type:ty) => {
         impl Register for $reg {
             fn address() -> RegisterAddr {
                 $addr
@@ -123,30 +123,32 @@ macro_rules! int_rw_register {
             }
         }
     };
+    ($reg:ident : $addr:expr, $type:ty, $res:expr) => {
+        #[doc = concat!("Struct representing the ",stringify!($reg)," register at ",stringify!($addr)," .")]
+        #[doc = concat!(stringify!($reg)," can be represented as larger ints but not floats or smaller ints")]
+        #[derive(Clone, Debug, PartialEq)]
+        pub struct $reg {
+            /// The value of the register
+            pub value: Option<$type>,
+            /// The resolution of the value
+            pub resolution: Resolution,
+        }
+
+        int_rw_register!(@IMPL_REG, $reg : $addr, $type, $res);
+        int_rw_register!(@IMPL_REG_AS_BYTES, $reg);
+
+        int_rw_register!(@FROM_DATA_STRUCT, $reg : $type);
+
+        int_rw_register!(@IMPL_REGISTER, $reg : $addr, $type);
+    };
+
 }
 
 /// Used to define a register with f32 as the representation.
 /// These registers using a `Map` to convert to different resolutions
 macro_rules! map_rw_register {
-    ($reg:ident : $addr:expr, $mapping:expr) => {
-        #[derive(Clone, Debug, PartialEq)]
-        #[doc = concat!("Struct representing the ",stringify!($reg)," register at ",stringify!($addr)," .")]
-        #[doc = concat!(stringify!($reg)," uses `", stringify!($mapping), "` to map between different resolutions")]
-        pub struct $reg {
-            value: Option<f32>,
-            resolution: Resolution,
-        }
+    (@IMPL_REG_AS_BYTES_MAPPED, $reg:ident : $addr:expr, $type:ty, $mapping:expr) => {
         impl $reg {
-            /// If the instance has a value, return it. Otherwise, return None
-            pub fn value(&self) -> Option<f32> {
-                self.value
-            }
-            /// Return the resolution
-            /// This either is the resolution to be read from the register or the resolution of the value field
-            pub fn resolution(&self) -> Resolution {
-                self.resolution
-            }
-
             fn as_bytes(&self) -> Result<Vec<u8>, RegisterError> {
                 let Some(value) = self.value else {
                     return Err(RegisterError::NoData);
@@ -160,64 +162,9 @@ macro_rules! map_rw_register {
                     }
                 }
             }
-            /// Each struct has a default [`Resolution`] that is used when writing to the register.
-            const DEFAULT_RESOLUTION: Resolution = Resolution::Float;
-
-            /// Creates a new instance of the struct with the data to be written using the default resolution.
-            pub fn write(data: f32) -> Self {
-                $reg {
-                    value: Some(data),
-                    resolution: Self::DEFAULT_RESOLUTION,
-                }
-            }
-            /// Creates a new instance of the struct with the data to be written using the specified resolution.
-            pub fn write_with_resolution(data: f32, r: Resolution) -> Self {
-                $reg {
-                    value: Some(data),
-                    resolution: r,
-                }
-            }
-            /// Creates a new instance of the struct for reading using the default resolution.
-            pub fn read() -> Self {
-                $reg {
-                    value: None,
-                    resolution: Self::DEFAULT_RESOLUTION,
-                }
-            }
-            /// Creates a new instance of the struct for reading using the specified resolution.
-            pub fn read_with_resolution(r: Resolution) -> Self {
-                $reg {
-                    value: None,
-                    resolution: r,
-                }
-            }
         }
-
-        impl From<f32> for $reg {
-            fn from(data: f32) -> $reg {
-                $reg {
-                    value: Some(data),
-                    resolution: Self::DEFAULT_RESOLUTION,
-                }
-            }
-        }
-        impl From<$reg> for RegisterDataStruct {
-            fn from(reg: $reg) -> RegisterDataStruct {
-                if let Ok(data) = reg.as_bytes() {
-                    return RegisterDataStruct {
-                        address: $reg::address(),
-                        resolution: reg.resolution,
-                        data: Some(data),
-                    };
-                } else {
-                    return RegisterDataStruct {
-                        address: $reg::address(),
-                        resolution: reg.resolution,
-                        data: None,
-                    };
-                }
-            }
-        }
+    };
+    (@IMPL_REGISTER_MAPPED, $reg:ident : $addr:expr, $type:ty, $mapping:expr) => {
         impl Register for $reg {
             fn address() -> RegisterAddr {
                 $addr
@@ -229,24 +176,43 @@ macro_rules! map_rw_register {
             {
                 Ok(match resolution {
                     Resolution::Int8 => Self {
-                        value: Some(f32::try_from_1_byte(bytes[0], $mapping)?),
+                        value: Some(<$type>::try_from_1_byte(bytes[0], $mapping)?),
                         resolution,
                     },
                     Resolution::Int16 => Self {
-                        value: Some(f32::try_from_2_bytes(&bytes[..2], $mapping)?),
+                        value: Some(<$type>::try_from_2_bytes(&bytes[..2], $mapping)?),
                         resolution,
                     },
                     Resolution::Int32 => Self {
-                        value: Some(f32::try_from_4_bytes(&bytes[..4], $mapping)?),
+                        value: Some(<$type>::try_from_4_bytes(&bytes[..4], $mapping)?),
                         resolution,
                     },
                     Resolution::Float => Self {
-                        value: Some(f32::try_from_f32_bytes(&bytes[..4], $mapping)?),
+                        value: Some(<$type>::try_from_f32_bytes(&bytes[..4], $mapping)?),
                         resolution,
                     },
                 })
             }
         }
+    };
+    ($reg:ident : $addr:expr, $type:ty, $mapping:expr) => {
+        #[derive(Clone, Debug, PartialEq)]
+        #[doc = concat!("Struct representing the ",stringify!($reg)," register at ",stringify!($addr)," .")]
+        #[doc = concat!(stringify!($reg)," uses `", stringify!($mapping), "` to map between different resolutions")]
+        pub struct $reg {
+            value: Option<$type>,
+            resolution: Resolution,
+        }
+
+        int_rw_register!(@IMPL_REG, $reg : $addr, $type, Resolution::Float);
+        map_rw_register!(@IMPL_REG_AS_BYTES_MAPPED, $reg : $addr, $type, $mapping);
+
+        int_rw_register!(@FROM_DATA_STRUCT, $reg : $type);
+
+        map_rw_register!(@IMPL_REGISTER_MAPPED, $reg : $addr, $type, $mapping);
+    };
+    ($reg:ident : $addr:expr, $mapping:expr) => {
+       map_rw_register!($reg : $addr, f32, $mapping);
     };
 }
 /// As the Moteus Registers are each a unique struct, they all implement the [`Register`] trait.
