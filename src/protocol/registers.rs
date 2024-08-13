@@ -44,6 +44,37 @@ macro_rules! int_rw_register {
                     Resolution::Float => value.try_into_f32_bytes(None).map(|x| x.to_vec()),
                 }
             }
+            /// Each struct has a default [`Resolution`] that is used when writing to the register.
+            const DEFAULT_RESOLUTION: Resolution = $res;
+
+            /// Creates a new instance of the struct with the data to be written using the default resolution.
+            pub fn write(data: $type) -> Self {
+                $reg {
+                    value: Some(data),
+                    resolution: Self::DEFAULT_RESOLUTION,
+                }
+            }
+            /// Creates a new instance of the struct with the data to be written using the specified resolution.
+            pub fn write_with_resolution(data: $type, r: Resolution) -> Self {
+                $reg {
+                    value: Some(data),
+                    resolution: r,
+                }
+            }
+            /// Creates a new instance of the struct for reading using the default resolution.
+            pub fn read() -> Self {
+                $reg {
+                    value: None,
+                    resolution: Self::DEFAULT_RESOLUTION,
+                }
+            }
+            /// Creates a new instance of the struct for reading using the specified resolution.
+            pub fn read_with_resolution(r: Resolution) -> Self {
+                $reg {
+                    value: None,
+                    resolution: r,
+                }
+            }
         }
         impl From<$reg> for RegisterDataStruct {
             fn from(reg: $reg) -> RegisterDataStruct {
@@ -91,34 +122,6 @@ macro_rules! int_rw_register {
                 })
             }
         }
-        impl RegisterData<$type> for $reg {
-            const DEFAULT_RESOLUTION: Resolution = $res;
-
-            fn write(data: $type) -> Self {
-                $reg {
-                    value: Some(data),
-                    resolution: Self::DEFAULT_RESOLUTION,
-                }
-            }
-            fn write_with_resolution(data: $type, r: Resolution) -> Self {
-                $reg {
-                    value: Some(data),
-                    resolution: r,
-                }
-            }
-            fn read() -> Self {
-                $reg {
-                    value: None,
-                    resolution: Self::DEFAULT_RESOLUTION,
-                }
-            }
-            fn read_with_resolution(r: Resolution) -> Self {
-                $reg {
-                    value: None,
-                    resolution: r,
-                }
-            }
-        }
     };
 }
 
@@ -155,6 +158,37 @@ macro_rules! map_rw_register {
                     Resolution::Float => {
                         value.try_into_f32_bytes(Some($mapping)).map(|x| x.to_vec())
                     }
+                }
+            }
+            /// Each struct has a default [`Resolution`] that is used when writing to the register.
+            const DEFAULT_RESOLUTION: Resolution = Resolution::Float;
+
+            /// Creates a new instance of the struct with the data to be written using the default resolution.
+            pub fn write(data: f32) -> Self {
+                $reg {
+                    value: Some(data),
+                    resolution: Self::DEFAULT_RESOLUTION,
+                }
+            }
+            /// Creates a new instance of the struct with the data to be written using the specified resolution.
+            pub fn write_with_resolution(data: f32, r: Resolution) -> Self {
+                $reg {
+                    value: Some(data),
+                    resolution: r,
+                }
+            }
+            /// Creates a new instance of the struct for reading using the default resolution.
+            pub fn read() -> Self {
+                $reg {
+                    value: None,
+                    resolution: Self::DEFAULT_RESOLUTION,
+                }
+            }
+            /// Creates a new instance of the struct for reading using the specified resolution.
+            pub fn read_with_resolution(r: Resolution) -> Self {
+                $reg {
+                    value: None,
+                    resolution: r,
                 }
             }
         }
@@ -213,34 +247,6 @@ macro_rules! map_rw_register {
                 })
             }
         }
-        impl RegisterData<f32> for $reg {
-            const DEFAULT_RESOLUTION: Resolution = Resolution::Float;
-
-            fn write(data: f32) -> Self {
-                $reg {
-                    value: Some(data),
-                    resolution: Self::DEFAULT_RESOLUTION,
-                }
-            }
-            fn write_with_resolution(data: f32, r: Resolution) -> Self {
-                $reg {
-                    value: Some(data),
-                    resolution: r,
-                }
-            }
-            fn read() -> Self {
-                $reg {
-                    value: None,
-                    resolution: Self::DEFAULT_RESOLUTION,
-                }
-            }
-            fn read_with_resolution(r: Resolution) -> Self {
-                $reg {
-                    value: None,
-                    resolution: r,
-                }
-            }
-        }
     };
 }
 /// As the Moteus Registers are each a unique struct, they all implement the [`Register`] trait.
@@ -251,20 +257,6 @@ pub trait Register {
     fn from_bytes(bytes: &[u8], resolution: Resolution) -> Result<Self, RegisterError>
     where
         Self: Sized;
-}
-
-/// [`RegisterData`] is a trait that is implemented by the structs that represent the data that can be written to the registers.
-pub trait RegisterData<T> {
-    /// Each struct has a default [`Resolution`] that is used when writing to the register.
-    const DEFAULT_RESOLUTION: Resolution;
-    /// Creates a new instance of the struct with the data to be written using the default resolution.
-    fn write(data: T) -> Self;
-    /// Creates a new instance of the struct with the data to be written using the specified resolution.
-    fn write_with_resolution(data: T, r: Resolution) -> Self;
-    /// Creates a new instance of the struct for reading using the default resolution.
-    fn read() -> Self;
-    /// Creates a new instance of the struct for reading using the specified resolution.
-    fn read_with_resolution(r: Resolution) -> Self;
 }
 
 /// A struct that represents the raw data (as `Vec<u8>`) that has been read from, or will be written to, a register

@@ -2,7 +2,6 @@
 //! each impl Into<[`FrameBuilder`]> and can be passed into functions such as [`crate::Controller::send_with_query`].
 
 use crate::protocol::{Frame, FrameBuilder};
-use crate::registers::RegisterData;
 use crate::{registers, Resolution};
 
 /// Sets the mode to `registers::Modes::Stopped`.
