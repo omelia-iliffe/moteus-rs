@@ -58,17 +58,19 @@ macro_rules! int_rw_register {
             }
         }
     };
-    (@IMPL_REG_AS_BYTES, $reg:ident) => {
+    (@IMPL_REG_AS_BYTES, $reg:ident : $mapping:expr) => {
         impl $reg {
             fn as_bytes(&self) -> Result<Vec<u8>, RegisterError> {
                 let Some(value) = self.value else {
                     return Err(RegisterError::NoData);
                 };
                 match self.resolution {
-                    Resolution::Int8 => value.try_into_1_byte().map(|x| vec![x]),
-                    Resolution::Int16 => value.try_into_2_bytes().map(|x| x.to_vec()),
-                    Resolution::Int32 => value.try_into_4_bytes().map(|x| x.to_vec()),
-                    Resolution::Float => value.try_into_f32_bytes().map(|x| x.to_vec()),
+                    Resolution::Int8 => value.try_into_1_byte($mapping.0).map(|x| vec![x]),
+                    Resolution::Int16 => value.try_into_2_bytes($mapping.1).map(|x| x.to_vec()),
+                    Resolution::Int32 => value.try_into_4_bytes($mapping.2).map(|x| x.to_vec()),
+                    Resolution::Float => {
+                        value.try_into_f32_bytes().map(|x| x.to_vec())
+                    }
                 }
             }
         }
@@ -92,13 +94,11 @@ macro_rules! int_rw_register {
             }
         }
     };
-    (@IMPL_REGISTER, $reg:ident : $addr:expr, $type:ty, $res:expr) => {
+    (@IMPL_REGISTER, $reg:ident : $addr:expr, $type:ty, $res:expr, $mapping:expr) => {
         impl Register for $reg {
             type INNER = $type;
-            /// Each struct has a default [`Resolution`] that is used when writing to the register.
             const DEFAULT_RESOLUTION: Resolution = $res;
-
-            const MAPPING: Option<Map> = None;
+            const MAPPING: Map = $mapping;
 
             fn address() -> RegisterAddr {
                 $addr
@@ -109,25 +109,33 @@ macro_rules! int_rw_register {
                 Self: Sized,
             {
                 Ok(match resolution {
-                    Resolution::Int8 => $reg {
-                        value: Some(<$type>::try_from_1_byte(bytes[0])?),
+                    Resolution::Int8 => Self {
+                        value: Some(<$type>::try_from_1_byte(bytes[0], $mapping.0)?),
                         resolution,
                     },
-                    Resolution::Int16 => $reg {
-                        value: Some(<$type>::try_from_2_bytes(&bytes[..2])?),
+                    Resolution::Int16 => Self {
+                        value: Some(<$type>::try_from_2_bytes(&bytes[..2], $mapping.1)?),
                         resolution,
                     },
-                    Resolution::Int32 => $reg {
-                        value: Some(<$type>::try_from_4_bytes(&bytes[..4])?),
+                    Resolution::Int32 => Self {
+                        value: Some(<$type>::try_from_4_bytes(&bytes[..4], $mapping.2)?),
                         resolution,
                     },
-                    Resolution::Float => $reg {
+                    Resolution::Float => Self {
                         value: Some(<$type>::try_from_f32_bytes(&bytes[..4])?),
                         resolution,
                     },
                 })
             }
         }
+    };
+    (@INTERNAL, $reg:ident : $addr:expr, $type:ty, $res:expr, $mapping:expr) => {
+        int_rw_register!(@IMPL_REG, $reg : $addr, $type, $res);
+        int_rw_register!(@IMPL_REG_AS_BYTES, $reg : $mapping);
+
+        int_rw_register!(@FROM_DATA_STRUCT, $reg : $type);
+
+        int_rw_register!(@IMPL_REGISTER, $reg : $addr, $type, $res, $mapping);
     };
     ($reg:ident : $addr:expr, $type:ty, $res:expr) => {
         #[doc = concat!("Struct representing the ",stringify!($reg)," register at ",stringify!($addr)," .")]
@@ -140,12 +148,8 @@ macro_rules! int_rw_register {
             pub resolution: Resolution,
         }
 
-        int_rw_register!(@IMPL_REG, $reg : $addr, $type, $res);
-        int_rw_register!(@IMPL_REG_AS_BYTES, $reg);
+        int_rw_register!(@INTERNAL, $reg : $addr, $type, $res, NO_MAP);
 
-        int_rw_register!(@FROM_DATA_STRUCT, $reg : $type);
-
-        int_rw_register!(@IMPL_REGISTER, $reg : $addr, $type, $res);
     };
 
 }
@@ -153,59 +157,7 @@ macro_rules! int_rw_register {
 /// Used to define a register with f32 as the representation.
 /// These registers using a `Map` to convert to different resolutions
 macro_rules! map_rw_register {
-    (@IMPL_REG_AS_BYTES_MAPPED, $reg:ident : $addr:expr, $type:ty, $mapping:expr) => {
-        impl $reg {
-            fn as_bytes(&self) -> Result<Vec<u8>, RegisterError> {
-                let Some(value) = self.value else {
-                    return Err(RegisterError::NoData);
-                };
-                match self.resolution {
-                    Resolution::Int8 => value.try_into_1_byte($mapping).map(|x| vec![x]),
-                    Resolution::Int16 => value.try_into_2_bytes($mapping).map(|x| x.to_vec()),
-                    Resolution::Int32 => value.try_into_4_bytes($mapping).map(|x| x.to_vec()),
-                    Resolution::Float => {
-                        value.try_into_f32_bytes($mapping).map(|x| x.to_vec())
-                    }
-                }
-            }
-        }
-    };
-    (@IMPL_REGISTER_MAPPED, $reg:ident : $addr:expr, $type:ty, $mapping:expr) => {
-        impl Register for $reg {
-            type INNER = $type;
-            const DEFAULT_RESOLUTION: Resolution = Resolution::Float;
-            const MAPPING: Option<Map> = Some($mapping);
-
-            fn address() -> RegisterAddr {
-                $addr
-            }
-
-            fn from_bytes(bytes: &[u8], resolution: Resolution) -> Result<Self, RegisterError>
-            where
-                Self: Sized,
-            {
-                Ok(match resolution {
-                    Resolution::Int8 => Self {
-                        value: Some(<$type>::try_from_1_byte(bytes[0], $mapping)?),
-                        resolution,
-                    },
-                    Resolution::Int16 => Self {
-                        value: Some(<$type>::try_from_2_bytes(&bytes[..2], $mapping)?),
-                        resolution,
-                    },
-                    Resolution::Int32 => Self {
-                        value: Some(<$type>::try_from_4_bytes(&bytes[..4], $mapping)?),
-                        resolution,
-                    },
-                    Resolution::Float => Self {
-                        value: Some(<$type>::try_from_f32_bytes(&bytes[..4], $mapping)?),
-                        resolution,
-                    },
-                })
-            }
-        }
-    };
-    ($reg:ident : $addr:expr, $type:ty, $mapping:expr) => {
+    ($reg:ident : $addr:expr, $type:ty, $res:expr, $mapping:expr) => {
         #[derive(Clone, Debug, PartialEq)]
         #[doc = concat!("Struct representing the ",stringify!($reg)," register at ",stringify!($addr)," .")]
         #[doc = concat!(stringify!($reg)," uses `", stringify!($mapping), "` to map between different resolutions")]
@@ -214,25 +166,21 @@ macro_rules! map_rw_register {
             resolution: Resolution,
         }
 
-        int_rw_register!(@IMPL_REG, $reg : $addr, $type, Resolution::Float);
-        map_rw_register!(@IMPL_REG_AS_BYTES_MAPPED, $reg : $addr, $type, $mapping);
+        int_rw_register!(@INTERNAL, $reg : $addr, $type, $res, $mapping);
 
-        int_rw_register!(@FROM_DATA_STRUCT, $reg : $type);
-
-        map_rw_register!(@IMPL_REGISTER_MAPPED, $reg : $addr, $type, $mapping);
     };
     ($reg:ident : $addr:expr, $mapping:expr) => {
-       map_rw_register!($reg : $addr, f32, $mapping);
+       map_rw_register!($reg : $addr, f32, Resolution::Float, $mapping);
     };
 }
 /// As the Moteus Registers are each a unique struct, they all implement the [`Register`] trait.
 pub trait Register {
     /// The inner type of the register
     type INNER;
-    /// The Default resolution for the registers
+    /// Each struct has a default [`Resolution`] that is used when writing to the register.
     const DEFAULT_RESOLUTION: Resolution;
     /// The mapping used to
-    const MAPPING: Option<Map>;
+    const MAPPING: Map;
     /// Returns the address of the register as a [`RegisterAddr`].
     fn address() -> RegisterAddr;
     /// Creates the register from a slice of bytes.
@@ -306,23 +254,23 @@ impl RegisterAddr {
 }
 
 trait TryIntoBytes {
-    fn try_into_1_byte(self, mapping: Option<Map>) -> Result<u8, RegisterError>;
-    fn try_into_2_bytes(self, mapping: Option<Map>) -> Result<[u8; 2], RegisterError>;
-    fn try_into_4_bytes(self, mapping: Option<Map>) -> Result<[u8; 4], RegisterError>;
-    fn try_into_f32_bytes(self, mapping: Option<Map>) -> Result<[u8; 4], RegisterError>;
+    fn try_into_1_byte(self, scale: f32) -> Result<u8, RegisterError>;
+    fn try_into_2_bytes(self, scale: f32) -> Result<[u8; 2], RegisterError>;
+    fn try_into_4_bytes(self, scale: f32) -> Result<[u8; 4], RegisterError>;
+    fn try_into_f32_bytes(self) -> Result<[u8; 4], RegisterError>;
 }
 
 trait TryFromBytes {
-    fn try_from_1_byte(byte: u8, mapping: Option<Map>) -> Result<Self, RegisterError>
+    fn try_from_1_byte(byte: u8, scale: f32) -> Result<Self, RegisterError>
     where
         Self: Sized;
-    fn try_from_2_bytes(bytes: &[u8], mapping: Option<Map>) -> Result<Self, RegisterError>
+    fn try_from_2_bytes(bytes: &[u8], scale: f32) -> Result<Self, RegisterError>
     where
         Self: Sized;
-    fn try_from_4_bytes(bytes: &[u8], mapping: Option<Map>) -> Result<Self, RegisterError>
+    fn try_from_4_bytes(bytes: &[u8], scale: f32) -> Result<Self, RegisterError>
     where
         Self: Sized;
-    fn try_from_f32_bytes(bytes: &[u8], mapping: Option<Map>) -> Result<Self, RegisterError>
+    fn try_from_f32_bytes(bytes: &[u8]) -> Result<Self, RegisterError>
     where
         Self: Sized;
 }
@@ -615,107 +563,107 @@ int_rw_register!(DriverFault1: RegisterAddr::DriverFault1, u32, Resolution::Int3
 int_rw_register!(DriverFault2: RegisterAddr::DriverFault2, u32, Resolution::Int32);
 
 impl TryIntoBytes for () {
-    fn try_into_1_byte(self, _: Option<Map>) -> Result<u8, RegisterError> {
+    fn try_into_1_byte(self, _scale: f32) -> Result<u8, RegisterError> {
         Ok(0)
     }
-    fn try_into_2_bytes(self, _: Option<Map>) -> Result<[u8; 2], RegisterError> {
+    fn try_into_2_bytes(self, _scale: f32) -> Result<[u8; 2], RegisterError> {
         Ok([0, 0])
     }
-    fn try_into_4_bytes(self, _: Option<Map>) -> Result<[u8; 4], RegisterError> {
+    fn try_into_4_bytes(self, _scale: f32) -> Result<[u8; 4], RegisterError> {
         Ok([0, 0, 0, 0])
     }
-    fn try_into_f32_bytes(self, _: Option<Map>) -> Result<[u8; 4], RegisterError> {
+    fn try_into_f32_bytes(self) -> Result<[u8; 4], RegisterError> {
         Ok([0, 0, 0, 0])
     }
 }
 
 impl TryFromBytes for () {
-    fn try_from_1_byte(_: u8, _: Option<Map>) -> Result<Self, RegisterError> {
+    fn try_from_1_byte(_: u8, _scale: f32) -> Result<Self, RegisterError> {
         Ok(())
     }
-    fn try_from_2_bytes(_: &[u8], _: Option<Map>) -> Result<Self, RegisterError> {
+    fn try_from_2_bytes(_: &[u8], _scale: f32) -> Result<Self, RegisterError> {
         Ok(())
     }
-    fn try_from_4_bytes(_: &[u8], _: Option<Map>) -> Result<Self, RegisterError> {
+    fn try_from_4_bytes(_: &[u8], _scale: f32) -> Result<Self, RegisterError> {
         Ok(())
     }
-    fn try_from_f32_bytes(_: &[u8], _: Option<Map>) -> Result<Self, RegisterError> {
+    fn try_from_f32_bytes(_: &[u8]) -> Result<Self, RegisterError> {
         Ok(())
     }
 }
 
 impl TryIntoBytes for i8 {
-    fn try_into_1_byte(self, _: Option<Map>) -> Result<u8, RegisterError> {
+    fn try_into_1_byte(self, _scale: f32) -> Result<u8, RegisterError> {
         Ok(self as u8)
     }
-    fn try_into_2_bytes(self, _: Option<Map>) -> Result<[u8; 2], RegisterError> {
+    fn try_into_2_bytes(self, _scale: f32) -> Result<[u8; 2], RegisterError> {
         Ok((self as i16).to_le_bytes())
     }
-    fn try_into_4_bytes(self, _: Option<Map>) -> Result<[u8; 4], RegisterError> {
+    fn try_into_4_bytes(self, _scale: f32) -> Result<[u8; 4], RegisterError> {
         Ok((self as i32).to_le_bytes())
     }
-    fn try_into_f32_bytes(self, _: Option<Map>) -> Result<[u8; 4], RegisterError> {
+    fn try_into_f32_bytes(self) -> Result<[u8; 4], RegisterError> {
         Err(RegisterError::IntAsFloat)
     }
 }
 
 impl TryFromBytes for i8 {
-    fn try_from_1_byte(byte: u8, _: Option<Map>) -> Result<Self, RegisterError> {
+    fn try_from_1_byte(byte: u8, _scale: f32) -> Result<Self, RegisterError> {
         Ok(byte as i8)
     }
-    fn try_from_2_bytes(bytes: &[u8], _: Option<Map>) -> Result<Self, RegisterError> {
+    fn try_from_2_bytes(bytes: &[u8], _scale: f32) -> Result<Self, RegisterError> {
         let value = i16::from_le_bytes([bytes[0], bytes[1]]);
         Ok(value as i8)
     }
-    fn try_from_4_bytes(bytes: &[u8], _: Option<Map>) -> Result<Self, RegisterError> {
+    fn try_from_4_bytes(bytes: &[u8], _scale: f32) -> Result<Self, RegisterError> {
         let value = i32::from_le_bytes([bytes[0], bytes[1], bytes[2], bytes[3]]);
         Ok(value as i8)
     }
-    fn try_from_f32_bytes(_: &[u8], _: Option<Map>) -> Result<Self, RegisterError> {
+    fn try_from_f32_bytes(_: &[u8]) -> Result<Self, RegisterError> {
         Err(RegisterError::IntAsFloat)
     }
 }
 
 impl TryIntoBytes for i32 {
-    fn try_into_1_byte(self, _: Option<Map>) -> Result<u8, RegisterError> {
+    fn try_into_1_byte(self, _scale: f32) -> Result<u8, RegisterError> {
         let value = self;
         if value > i8::MAX as i32 || value < i8::MIN as i32 {
             return Err(RegisterError::Overflow);
         }
         Ok(value as u8)
     }
-    fn try_into_2_bytes(self, _: Option<Map>) -> Result<[u8; 2], RegisterError> {
+    fn try_into_2_bytes(self, _scale: f32) -> Result<[u8; 2], RegisterError> {
         let value = self;
         if value > i16::MAX as i32 || value < i16::MIN as i32 {
             return Err(RegisterError::Overflow);
         }
         Ok((value as i16).to_le_bytes())
     }
-    fn try_into_4_bytes(self, _: Option<Map>) -> Result<[u8; 4], RegisterError> {
+    fn try_into_4_bytes(self, _scale: f32) -> Result<[u8; 4], RegisterError> {
         let value = self;
         Ok(value.to_le_bytes())
     }
-    fn try_into_f32_bytes(self, _: Option<Map>) -> Result<[u8; 4], RegisterError> {
+    fn try_into_f32_bytes(self) -> Result<[u8; 4], RegisterError> {
         Err(RegisterError::IntAsFloat)
     }
 }
 
 impl TryFromBytes for i32 {
-    fn try_from_1_byte(byte: u8, _: Option<Map>) -> Result<Self, RegisterError> {
+    fn try_from_1_byte(byte: u8, _scale: f32) -> Result<Self, RegisterError> {
         let value = byte as i32;
         Ok(value)
     }
-    fn try_from_2_bytes(bytes: &[u8], _: Option<Map>) -> Result<Self, RegisterError> {
+    fn try_from_2_bytes(bytes: &[u8], _scale: f32) -> Result<Self, RegisterError> {
         let mut rdr = std::io::Cursor::new(bytes);
         let value = rdr.read_i16::<LE>()?;
         Ok(value as i32)
     }
-    fn try_from_4_bytes(bytes: &[u8], _: Option<Map>) -> Result<Self, RegisterError> {
+    fn try_from_4_bytes(bytes: &[u8], _scale: f32) -> Result<Self, RegisterError> {
         let mut rdr = std::io::Cursor::new(bytes);
         let value = rdr.read_i32::<LE>()?;
         Ok(value)
     }
-    fn try_from_f32_bytes(bytes: &[u8], _: Option<Map>) -> Result<Self, RegisterError> {
+    fn try_from_f32_bytes(bytes: &[u8]) -> Result<Self, RegisterError> {
         let mut rdr = std::io::Cursor::new(bytes);
         let value = rdr.read_f32::<LE>()?;
         Ok(value as i32)
@@ -723,92 +671,89 @@ impl TryFromBytes for i32 {
 }
 
 impl TryIntoBytes for u32 {
-    fn try_into_1_byte(self, _: Option<Map>) -> Result<u8, RegisterError> {
+    fn try_into_1_byte(self, _scale: f32) -> Result<u8, RegisterError> {
         let value = self;
         if value > i8::MAX as u32 || value < i8::MIN as u32 {
             return Err(RegisterError::Overflow);
         }
         Ok(value as u8)
     }
-    fn try_into_2_bytes(self, _: Option<Map>) -> Result<[u8; 2], RegisterError> {
+    fn try_into_2_bytes(self, _scale: f32) -> Result<[u8; 2], RegisterError> {
         let value = self;
         if value > i16::MAX as u32 || value < i16::MIN as u32 {
             return Err(RegisterError::Overflow);
         }
         Ok((value as u16).to_le_bytes())
     }
-    fn try_into_4_bytes(self, _: Option<Map>) -> Result<[u8; 4], RegisterError> {
+    fn try_into_4_bytes(self, _scale: f32) -> Result<[u8; 4], RegisterError> {
         let value = self;
         Ok(value.to_le_bytes())
     }
-    fn try_into_f32_bytes(self, _: Option<Map>) -> Result<[u8; 4], RegisterError> {
+    fn try_into_f32_bytes(self) -> Result<[u8; 4], RegisterError> {
         Err(RegisterError::IntAsFloat)
     }
 }
 
 impl TryFromBytes for u32 {
-    fn try_from_1_byte(byte: u8, _: Option<Map>) -> Result<Self, RegisterError> {
+    fn try_from_1_byte(byte: u8, _scale: f32) -> Result<Self, RegisterError> {
         let value = byte as u32;
         Ok(value)
     }
-    fn try_from_2_bytes(bytes: &[u8], _: Option<Map>) -> Result<Self, RegisterError> {
+    fn try_from_2_bytes(bytes: &[u8], _scale: f32) -> Result<Self, RegisterError> {
         let mut rdr = std::io::Cursor::new(bytes);
         let value = rdr.read_i16::<LE>()?;
         Ok(value as u32)
     }
-    fn try_from_4_bytes(bytes: &[u8], _: Option<Map>) -> Result<Self, RegisterError> {
+    fn try_from_4_bytes(bytes: &[u8], _scale: f32) -> Result<Self, RegisterError> {
         let mut rdr = std::io::Cursor::new(bytes);
         let value = rdr.read_i32::<LE>()?;
         Ok(value as u32)
     }
-    fn try_from_f32_bytes(_bytes: &[u8], _: Option<Map>) -> Result<Self, RegisterError> {
+    fn try_from_f32_bytes(_bytes: &[u8]) -> Result<Self, RegisterError> {
         Err(RegisterError::IntAsFloat)
     }
 }
 
 impl TryIntoBytes for f32 {
-    fn try_into_1_byte(self, mapping: Option<Map>) -> Result<u8, RegisterError> {
+    fn try_into_1_byte(self, scale: f32) -> Result<u8, RegisterError> {
         if !self.is_finite() {
             return Ok(i8::MIN as u8);
         }
-        let value = self / mapping.ok_or(RegisterError::NoMapping)?.0;
+        let value = self / scale;
 
         if value > i8::MAX as f32 || value < i8::MIN as f32 {
             return Err(RegisterError::Overflow);
         }
         Ok(value as u8)
     }
-    fn try_into_2_bytes(self, mapping: Option<Map>) -> Result<[u8; 2], RegisterError> {
+    fn try_into_2_bytes(self, scale: f32) -> Result<[u8; 2], RegisterError> {
         if !self.is_finite() {
             return Ok(i16::MIN.to_le_bytes());
         }
-        let value = self / mapping.ok_or(RegisterError::NoMapping)?.1;
+        let value = self / scale;
         if value > i16::MAX as f32 || value < i16::MIN as f32 {
             return Err(RegisterError::Overflow);
         }
         Ok((value as i16).to_le_bytes())
     }
-    fn try_into_4_bytes(self, mapping: Option<Map>) -> Result<[u8; 4], RegisterError> {
+    fn try_into_4_bytes(self, scale: f32) -> Result<[u8; 4], RegisterError> {
         if !self.is_finite() {
             return Ok(i32::MIN.to_le_bytes());
         }
-        let value = self / mapping.ok_or(RegisterError::NoMapping)?.2;
+        let value = self / scale;
         if value > i32::MAX as f32 || value < i32::MIN as f32 {
             return Err(RegisterError::Overflow);
         }
         Ok((value as i32).to_le_bytes())
     }
-    fn try_into_f32_bytes(self, _mapping: Option<Map>) -> Result<[u8; 4], RegisterError> {
+    fn try_into_f32_bytes(self) -> Result<[u8; 4], RegisterError> {
         let value = self;
         Ok(value.to_le_bytes())
     }
 }
 
 impl TryFromBytes for f32 {
-    fn try_from_1_byte(byte: u8, mapping: Option<Map>) -> Result<Self, RegisterError> {
-        let Some(mapping) = mapping else {
-            return Err(RegisterError::NoMapping);
-        };
+    fn try_from_1_byte(byte: u8, scale: f32) -> Result<Self, RegisterError> {
         let value = {
             let int = byte as i8;
             if int == i8::MIN {
@@ -818,12 +763,9 @@ impl TryFromBytes for f32 {
             }
         };
 
-        Ok(value * mapping.0)
+        Ok(value * scale)
     }
-    fn try_from_2_bytes(bytes: &[u8], mapping: Option<Map>) -> Result<Self, RegisterError> {
-        let Some(mapping) = mapping else {
-            return Err(RegisterError::NoMapping);
-        };
+    fn try_from_2_bytes(bytes: &[u8], scale: f32) -> Result<Self, RegisterError> {
         let mut rdr = std::io::Cursor::new(bytes);
         let value = rdr.read_i16::<LE>()?;
         let value = {
@@ -833,12 +775,9 @@ impl TryFromBytes for f32 {
                 value as f32
             }
         };
-        Ok(value * mapping.1)
+        Ok(value * scale)
     }
-    fn try_from_4_bytes(bytes: &[u8], mapping: Option<Map>) -> Result<Self, RegisterError> {
-        let Some(mapping) = mapping else {
-            return Err(RegisterError::NoMapping);
-        };
+    fn try_from_4_bytes(bytes: &[u8], scale: f32) -> Result<Self, RegisterError> {
         let mut rdr = std::io::Cursor::new(bytes);
         let value = rdr.read_i32::<LE>()?;
         let value = {
@@ -848,12 +787,9 @@ impl TryFromBytes for f32 {
                 value as f32
             }
         };
-        Ok(value * mapping.2)
+        Ok(value * scale)
     }
-    fn try_from_f32_bytes(bytes: &[u8], _: Option<Map>) -> Result<Self, RegisterError> {
-        // let Some(mapping) = mapping else {
-        //     return Err(RegisterError::NoMapping);
-        // };
+    fn try_from_f32_bytes(bytes: &[u8]) -> Result<Self, RegisterError> {
         let mut rdr = std::io::Cursor::new(bytes);
         let value = rdr.read_f32::<LE>()?;
         Ok(value)
@@ -883,35 +819,35 @@ pub enum Modes {
 }
 
 impl TryIntoBytes for Modes {
-    fn try_into_1_byte(self, _: Option<Map>) -> Result<u8, RegisterError> {
+    fn try_into_1_byte(self, _scale: f32) -> Result<u8, RegisterError> {
         Ok(self as u8)
     }
 
-    fn try_into_2_bytes(self, _: Option<Map>) -> Result<[u8; 2], RegisterError> {
+    fn try_into_2_bytes(self, _scale: f32) -> Result<[u8; 2], RegisterError> {
         Ok((self as i16).to_le_bytes())
     }
 
-    fn try_into_4_bytes(self, _: Option<Map>) -> Result<[u8; 4], RegisterError> {
+    fn try_into_4_bytes(self, _scale: f32) -> Result<[u8; 4], RegisterError> {
         Ok((self as i32).to_le_bytes())
     }
-    fn try_into_f32_bytes(self, _: Option<Map>) -> Result<[u8; 4], RegisterError> {
+    fn try_into_f32_bytes(self) -> Result<[u8; 4], RegisterError> {
         Err(RegisterError::IntAsFloat)
     }
 }
 
 impl TryFromBytes for Modes {
-    fn try_from_1_byte(byte: u8, _: Option<Map>) -> Result<Self, RegisterError> {
+    fn try_from_1_byte(byte: u8, _scale: f32) -> Result<Self, RegisterError> {
         Modes::from_u8(byte).ok_or(RegisterError::InvalidData)
     }
-    fn try_from_2_bytes(bytes: &[u8], _: Option<Map>) -> Result<Self, RegisterError> {
+    fn try_from_2_bytes(bytes: &[u8], _scale: f32) -> Result<Self, RegisterError> {
         let value = u16::from_le_bytes([bytes[0], bytes[1]]);
         Modes::from_u16(value).ok_or(RegisterError::InvalidData)
     }
-    fn try_from_4_bytes(bytes: &[u8], _: Option<Map>) -> Result<Self, RegisterError> {
+    fn try_from_4_bytes(bytes: &[u8], _scale: f32) -> Result<Self, RegisterError> {
         let value = u32::from_le_bytes([bytes[0], bytes[1], bytes[2], bytes[3]]);
         Modes::from_u32(value).ok_or(RegisterError::InvalidData)
     }
-    fn try_from_f32_bytes(_bytes: &[u8], _: Option<Map>) -> Result<Self, RegisterError> {
+    fn try_from_f32_bytes(_bytes: &[u8]) -> Result<Self, RegisterError> {
         Err(RegisterError::IntAsFloat)
     }
 }
@@ -948,35 +884,35 @@ pub enum Faults {
 }
 
 impl TryIntoBytes for Faults {
-    fn try_into_1_byte(self, _: Option<Map>) -> Result<u8, RegisterError> {
+    fn try_into_1_byte(self, _scale: f32) -> Result<u8, RegisterError> {
         Ok(self as u8)
     }
 
-    fn try_into_2_bytes(self, _: Option<Map>) -> Result<[u8; 2], RegisterError> {
+    fn try_into_2_bytes(self, _scale: f32) -> Result<[u8; 2], RegisterError> {
         Ok((self as i16).to_le_bytes())
     }
 
-    fn try_into_4_bytes(self, _: Option<Map>) -> Result<[u8; 4], RegisterError> {
+    fn try_into_4_bytes(self, _scale: f32) -> Result<[u8; 4], RegisterError> {
         Ok((self as i32).to_le_bytes())
     }
-    fn try_into_f32_bytes(self, _: Option<Map>) -> Result<[u8; 4], RegisterError> {
+    fn try_into_f32_bytes(self) -> Result<[u8; 4], RegisterError> {
         Err(RegisterError::IntAsFloat)
     }
 }
 
 impl TryFromBytes for Faults {
-    fn try_from_1_byte(byte: u8, _: Option<Map>) -> Result<Self, RegisterError> {
+    fn try_from_1_byte(byte: u8, _scale: f32) -> Result<Self, RegisterError> {
         Faults::from_u8(byte).ok_or(RegisterError::InvalidData)
     }
-    fn try_from_2_bytes(bytes: &[u8], _: Option<Map>) -> Result<Self, RegisterError> {
+    fn try_from_2_bytes(bytes: &[u8], _scale: f32) -> Result<Self, RegisterError> {
         let value = u16::from_le_bytes([bytes[0], bytes[1]]);
         Faults::from_u16(value).ok_or(RegisterError::InvalidData)
     }
-    fn try_from_4_bytes(bytes: &[u8], _: Option<Map>) -> Result<Self, RegisterError> {
+    fn try_from_4_bytes(bytes: &[u8], _scale: f32) -> Result<Self, RegisterError> {
         let value = u32::from_le_bytes([bytes[0], bytes[1], bytes[2], bytes[3]]);
         Faults::from_u32(value).ok_or(RegisterError::InvalidData)
     }
-    fn try_from_f32_bytes(_bytes: &[u8], _: Option<Map>) -> Result<Self, RegisterError> {
+    fn try_from_f32_bytes(_bytes: &[u8]) -> Result<Self, RegisterError> {
         Err(RegisterError::IntAsFloat)
     }
 }
@@ -991,35 +927,35 @@ pub enum HomeStates {
 }
 
 impl TryIntoBytes for HomeStates {
-    fn try_into_1_byte(self, _: Option<Map>) -> Result<u8, RegisterError> {
+    fn try_into_1_byte(self, _scale: f32) -> Result<u8, RegisterError> {
         Ok(self as u8)
     }
 
-    fn try_into_2_bytes(self, _: Option<Map>) -> Result<[u8; 2], RegisterError> {
+    fn try_into_2_bytes(self, _scale: f32) -> Result<[u8; 2], RegisterError> {
         Ok((self as i16).to_le_bytes())
     }
 
-    fn try_into_4_bytes(self, _: Option<Map>) -> Result<[u8; 4], RegisterError> {
+    fn try_into_4_bytes(self, _scale: f32) -> Result<[u8; 4], RegisterError> {
         Ok((self as i32).to_le_bytes())
     }
-    fn try_into_f32_bytes(self, _: Option<Map>) -> Result<[u8; 4], RegisterError> {
+    fn try_into_f32_bytes(self) -> Result<[u8; 4], RegisterError> {
         Err(RegisterError::IntAsFloat)
     }
 }
 
 impl TryFromBytes for HomeStates {
-    fn try_from_1_byte(byte: u8, _: Option<Map>) -> Result<Self, RegisterError> {
+    fn try_from_1_byte(byte: u8, _scale: f32) -> Result<Self, RegisterError> {
         HomeStates::from_u8(byte).ok_or(RegisterError::InvalidData)
     }
-    fn try_from_2_bytes(bytes: &[u8], _: Option<Map>) -> Result<Self, RegisterError> {
+    fn try_from_2_bytes(bytes: &[u8], _scale: f32) -> Result<Self, RegisterError> {
         let value = u16::from_le_bytes([bytes[0], bytes[1]]);
         HomeStates::from_u16(value).ok_or(RegisterError::InvalidData)
     }
-    fn try_from_4_bytes(bytes: &[u8], _: Option<Map>) -> Result<Self, RegisterError> {
+    fn try_from_4_bytes(bytes: &[u8], _scale: f32) -> Result<Self, RegisterError> {
         let value = u32::from_le_bytes([bytes[0], bytes[1], bytes[2], bytes[3]]);
         HomeStates::from_u32(value).ok_or(RegisterError::InvalidData)
     }
-    fn try_from_f32_bytes(_bytes: &[u8], _: Option<Map>) -> Result<Self, RegisterError> {
+    fn try_from_f32_bytes(_bytes: &[u8]) -> Result<Self, RegisterError> {
         Err(RegisterError::IntAsFloat)
     }
 }
