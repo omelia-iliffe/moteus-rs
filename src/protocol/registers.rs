@@ -837,6 +837,17 @@ impl TryFromBytes for f32 {
     }
 }
 
+impl<R> TryFrom<f32> for Write<R>
+where
+    R: Register<INNER = f32> + Writeable,
+{
+    type Error = RegisterError;
+
+    fn try_from(value: f32) -> Result<Self, Self::Error> {
+        R::write(value)
+    }
+}
+
 #[allow(missing_docs)]
 #[derive(Debug, Clone, Copy, AsBytes, FromPrimitive, PartialEq, Eq)]
 #[repr(u8)]
