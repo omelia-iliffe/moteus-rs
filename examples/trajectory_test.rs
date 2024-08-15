@@ -4,7 +4,6 @@
 //! Demonstrates how to specify alternate registers to query, and how
 //! to control the velocity and acceleration limits on a per-command basis
 //! to create a continuous trajectory.
-//!
 use moteus::frame::{Query, QueryType};
 use moteus::registers::*;
 use moteus::Controller;

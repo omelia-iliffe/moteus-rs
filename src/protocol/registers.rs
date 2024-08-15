@@ -5,11 +5,11 @@
 //!
 //! This module contains the register structs as well as trait interfaces and register types (such as [`Modes`] and [`HomeStates`]).
 
-use std::marker::PhantomData;
 use crate::{RegisterError, Resolution};
 use byteorder::{ReadBytesExt, LE};
 use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
+use std::marker::PhantomData;
 use zerocopy::AsBytes;
 
 /// Used to define a register with Integers as the representation
@@ -120,54 +120,84 @@ pub trait Register {
 pub trait Writeable: Register {
     /// Takes the data to be written and returns a [`Write`] struct
     /// using the default resolution of the register
-    fn write(data: Self::INNER) -> Result<Write<Self>, RegisterError> where Self: Sized{
+    fn write(data: Self::INNER) -> Result<Write<Self>, RegisterError>
+    where
+        Self: Sized,
+    {
         Self::write_with_resolution(data, Self::DEFAULT_RESOLUTION)
     }
     /// Takes the data to be written and the resolution to write it in and returns a [`Write`] struct
-    fn write_with_resolution(data: Self::INNER, r: Resolution) -> Result<Write<Self>, RegisterError> where Self: Sized;
+    fn write_with_resolution(
+        data: Self::INNER,
+        r: Resolution,
+    ) -> Result<Write<Self>, RegisterError>
+    where
+        Self: Sized;
 }
 
 /// holds the data to be written
 /// impls Into<[`RegisterDataStruct`]>
 #[derive(Debug, Clone)]
-pub struct Write<R> where R: Register {
+pub struct Write<R>
+where
+    R: Register,
+{
     value: R::INNER,
     resolution: Resolution,
-    data: Vec<u8>
+    data: Vec<u8>,
 }
 
 /// All [`Register`]s that are writable impl the [`Readable`] trait
 pub trait Readable: Register {
     /// Returns a [`Read`] struct with the default resolution
-    fn read() -> Read<Self> where Self: Sized {
+    fn read() -> Read<Self>
+    where
+        Self: Sized,
+    {
         Self::read_with_resolution(Self::DEFAULT_RESOLUTION)
     }
     /// Returns a [`Read`] struct with the given resolution
-    fn read_with_resolution(r: Resolution) -> Read<Self> where Self: Sized;
+    fn read_with_resolution(r: Resolution) -> Read<Self>
+    where
+        Self: Sized;
 }
 
 /// holds the address and resolution to be read from the controller
 /// impls Into<[`RegisterDataStruct`]>
 #[derive(Debug, Clone)]
-pub struct Read<R> where R: Register + Readable {
+pub struct Read<R>
+where
+    R: Register + Readable,
+{
     register: PhantomData<R>,
     resolution: Resolution,
 }
 
 /// Response Data from the moteus board
 #[derive(Debug, Clone)]
-pub struct Res<R> where R: Register {
+pub struct Res<R>
+where
+    R: Register,
+{
     value: R::INNER,
 }
 
-impl<R> Res<R> where R:Register, R::INNER: Copy {
+impl<R> Res<R>
+where
+    R: Register,
+    R::INNER: Copy,
+{
     /// Returns the value of the register
     pub fn value(&self) -> R::INNER {
         self.value
     }
 }
 
-impl<R> PartialEq<Write<R>> for Res<R> where R: Register, R::INNER: PartialEq {
+impl<R> PartialEq<Write<R>> for Res<R>
+where
+    R: Register,
+    R::INNER: PartialEq,
+{
     fn eq(&self, other: &Write<R>) -> bool {
         self.value == other.value
     }
@@ -188,9 +218,7 @@ impl RegisterDataStruct {
     pub(crate) fn as_res<R: Register>(&self) -> Result<Res<R>, RegisterError> {
         let bytes = self.data.as_ref().ok_or(RegisterError::NoData)?;
         let value = R::from_bytes(bytes, self.resolution)?;
-        Ok(Res {
-            value
-        })
+        Ok(Res { value })
     }
 
     pub(crate) fn from_bytes(
@@ -216,7 +244,10 @@ impl std::fmt::Debug for RegisterDataStruct {
     }
 }
 
-impl<R> From<Write<R>> for RegisterDataStruct where R: Register + Writeable {
+impl<R> From<Write<R>> for RegisterDataStruct
+where
+    R: Register + Writeable,
+{
     fn from(w: Write<R>) -> RegisterDataStruct {
         RegisterDataStruct {
             address: R::address(),
@@ -226,7 +257,10 @@ impl<R> From<Write<R>> for RegisterDataStruct where R: Register + Writeable {
     }
 }
 
-impl<R> From<Read<R>> for RegisterDataStruct where R: Register + Readable {
+impl<R> From<Read<R>> for RegisterDataStruct
+where
+    R: Register + Readable,
+{
     fn from(r: Read<R>) -> RegisterDataStruct {
         RegisterDataStruct {
             address: R::address(),
@@ -1009,25 +1043,30 @@ mod tests {
             .data;
         assert_eq!(data, (-20000i16).to_le_bytes().to_vec());
         let data = Position::write_with_resolution(-2.0, Resolution::Int32)
-            .unwrap().data;
+            .unwrap()
+            .data;
         assert_eq!(data, (-200000i32).to_le_bytes().to_vec());
         let data = Position::write_with_resolution(-2.0, Resolution::Float)
-            .unwrap().data;
+            .unwrap()
+            .data;
         assert_eq!(data, (-2.0f32).to_le_bytes().to_vec());
     }
 
     #[test]
     fn test_u8_register() {
         let data = Mode::write_with_resolution(Modes::Voltage, Resolution::Int8)
-            .unwrap().data;
+            .unwrap()
+            .data;
         assert_eq!(data, vec![6]);
         let data = Mode::from_bytes(&data, Resolution::Int8).unwrap();
         assert_eq!(data, Mode::write(Modes::Voltage).unwrap().value);
         let data = Mode::write_with_resolution(Modes::Voltage, Resolution::Int16)
-            .unwrap().data;
+            .unwrap()
+            .data;
         assert_eq!(data, [6, 0].to_vec());
         let data = Mode::write_with_resolution(Modes::Voltage, Resolution::Int32)
-            .unwrap().data;
+            .unwrap()
+            .data;
         assert_eq!(data, [6, 0, 0, 0].to_vec());
         let data = Mode::write_with_resolution(Modes::Voltage, Resolution::Float);
         assert!(data.is_err()); // IntAsFloat
@@ -1036,13 +1075,16 @@ mod tests {
     #[test]
     fn test_i32_register() {
         let data = MillisecondCounter::write_with_resolution(1, Resolution::Int8)
-            .unwrap().data;
+            .unwrap()
+            .data;
         assert_eq!(data, vec!(1));
         let data = MillisecondCounter::write_with_resolution(1, Resolution::Int16)
-            .unwrap().data;
+            .unwrap()
+            .data;
         assert_eq!(data, vec!(1, 0));
         let data = MillisecondCounter::write_with_resolution(1, Resolution::Int32)
-            .unwrap().data;
+            .unwrap()
+            .data;
         assert_eq!(data, vec!(1, 0, 0, 0));
         let data = MillisecondCounter::write_with_resolution(1, Resolution::Float);
         assert!(data.is_err());
@@ -1054,27 +1096,32 @@ mod tests {
     #[test]
     fn test_f32_nan() {
         let data = Position::write_with_resolution(f32::NAN, Resolution::Float)
-            .unwrap().data;
+            .unwrap()
+            .data;
         assert_eq!(data, vec!(0, 0, 192, 127));
-        assert!(Position::from_bytes(&data, Resolution::Float).unwrap()
+        assert!(Position::from_bytes(&data, Resolution::Float)
+            .unwrap()
             .is_nan());
 
         let data = Position::write_with_resolution(f32::NAN, Resolution::Int8)
-            .unwrap().data;
+            .unwrap()
+            .data;
         assert_eq!(data, vec!(i8::MIN as u8));
         assert!(Position::from_bytes(&data, Resolution::Int8)
             .unwrap()
             .is_nan());
 
         let data = Position::write_with_resolution(f32::NAN, Resolution::Int16)
-            .unwrap().data;
+            .unwrap()
+            .data;
         assert_eq!(data, vec!(0, 128));
         assert!(Position::from_bytes(&data, Resolution::Int16)
             .unwrap()
             .is_nan());
 
         let data = Position::write_with_resolution(f32::NAN, Resolution::Int32)
-            .unwrap().data;
+            .unwrap()
+            .data;
         assert_eq!(data, vec!(0, 0, 0, 128));
         assert!(Position::from_bytes(&data, Resolution::Int32)
             .unwrap()
