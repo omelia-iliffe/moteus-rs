@@ -11,7 +11,9 @@ pub struct Stop;
 
 impl From<Stop> for FrameBuilder {
     fn from(_: Stop) -> FrameBuilder {
-        Frame::builder().add_registers([registers::Mode::write(registers::Modes::Stopped).unwrap().into()])
+        let mut builder = Frame::builder();
+        builder.add(registers::Mode::write(registers::Modes::Stopped).unwrap());
+        builder
     }
 }
 
@@ -63,29 +65,43 @@ impl Position {
     }
 }
 
-impl IntoIterator for Position {
-    type Item = registers::RegisterDataStruct;
-    type IntoIter = std::vec::IntoIter<Self::Item>;
-
-    fn into_iter(self) -> Self::IntoIter {
-        vec![
-            Some(registers::Mode::write(registers::Modes::Position).unwrap().into()),
-            self.position.map(|p| p.into()),
-            self.velocity.map(|v| v.into()),
-            self.feedforward_torque.map(|f| f.into()),
-            self.kp_scale.map(|k| k.into()),
-            self.kd_scale.map(|k| k.into()),
-            self.maximum_torque.map(|m| m.into()),
-            self.stop_position.map(|s| s.into()),
-            self.watchdog_timeout.map(|w| w.into()),
-            self.velocity_limit.map(|v| v.into()),
-            self.acceleration_limit.map(|a| a.into()),
-            self.fixed_voltage_override.map(|f| f.into()),
-        ]
-        .into_iter()
-        .flatten()
-        .collect::<Vec<registers::RegisterDataStruct>>()
-        .into_iter()
+impl From<Position> for FrameBuilder {
+    fn from(position: Position) -> Self {
+        let mut builder = Frame::builder();
+            if let Some(p) = position.position {
+                builder.add(p);
+            }
+            if let Some(v) = position.velocity {
+                builder.add(v);
+            }
+            if let Some(t) = position.feedforward_torque {
+                builder.add(t);
+            }
+            if let Some(kp) = position.kp_scale {
+                builder.add(kp);
+            }
+            if let Some(kd) = position.kd_scale {
+                builder.add(kd);
+            }
+            if let Some(t) = position.maximum_torque {
+                builder.add(t);
+            }
+            if let Some(s) = position.stop_position {
+                builder.add(s);
+            }
+            if let Some(w) = position.watchdog_timeout {
+                builder.add(w);
+            }
+            if let Some(v) = position.velocity_limit {
+                builder.add(v);
+            }
+            if let Some(a) = position.acceleration_limit {
+                builder.add(a);
+            }
+            if let Some(f) = position.fixed_voltage_override {
+                builder.add(f);
+            }
+        builder
     }
 }
 
@@ -223,12 +239,14 @@ mod tests {
         );
         let _ = c.query(1, QueryType::Default);
 
-        let custom = Frame::builder()
-            .add_registers([registers::Mode::write(registers::Modes::Position).unwrap().into()]);
+        let mut custom = Frame::builder();
+            custom
+            .add(registers::Mode::write(registers::Modes::Position).unwrap());
         let _ = c.query(1, QueryType::Custom(custom));
 
-        let custom = Frame::builder()
-            .add_registers([registers::Mode::write(registers::Modes::Position).unwrap().into()]);
+        let mut custom = Frame::builder();
+        custom
+            .add(registers::Mode::write(registers::Modes::Position).unwrap());
         let _ = c.query(1, QueryType::DefaultAnd(custom));
     }
 }
