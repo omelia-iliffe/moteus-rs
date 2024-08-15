@@ -2,8 +2,8 @@
 //! each impl Into<[`FrameBuilder`]> and can be passed into functions such as [`crate::Controller::send_with_query`].
 
 use crate::protocol::{Frame, FrameBuilder};
-use crate::{registers, Resolution};
 use crate::registers::{Read, Readable, Write, Writeable};
+use crate::{registers, Resolution};
 
 /// Sets the mode to `registers::Modes::Stopped`.
 #[derive(Debug, Default, Clone)]
@@ -68,39 +68,39 @@ impl Position {
 impl From<Position> for FrameBuilder {
     fn from(position: Position) -> Self {
         let mut builder = Frame::builder();
-            if let Some(p) = position.position {
-                builder.add(p);
-            }
-            if let Some(v) = position.velocity {
-                builder.add(v);
-            }
-            if let Some(t) = position.feedforward_torque {
-                builder.add(t);
-            }
-            if let Some(kp) = position.kp_scale {
-                builder.add(kp);
-            }
-            if let Some(kd) = position.kd_scale {
-                builder.add(kd);
-            }
-            if let Some(t) = position.maximum_torque {
-                builder.add(t);
-            }
-            if let Some(s) = position.stop_position {
-                builder.add(s);
-            }
-            if let Some(w) = position.watchdog_timeout {
-                builder.add(w);
-            }
-            if let Some(v) = position.velocity_limit {
-                builder.add(v);
-            }
-            if let Some(a) = position.acceleration_limit {
-                builder.add(a);
-            }
-            if let Some(f) = position.fixed_voltage_override {
-                builder.add(f);
-            }
+        if let Some(p) = position.position {
+            builder.add(p);
+        }
+        if let Some(v) = position.velocity {
+            builder.add(v);
+        }
+        if let Some(t) = position.feedforward_torque {
+            builder.add(t);
+        }
+        if let Some(kp) = position.kp_scale {
+            builder.add(kp);
+        }
+        if let Some(kd) = position.kd_scale {
+            builder.add(kd);
+        }
+        if let Some(t) = position.maximum_torque {
+            builder.add(t);
+        }
+        if let Some(s) = position.stop_position {
+            builder.add(s);
+        }
+        if let Some(w) = position.watchdog_timeout {
+            builder.add(w);
+        }
+        if let Some(v) = position.velocity_limit {
+            builder.add(v);
+        }
+        if let Some(a) = position.acceleration_limit {
+            builder.add(a);
+        }
+        if let Some(f) = position.fixed_voltage_override {
+            builder.add(f);
+        }
         builder
     }
 }
@@ -240,13 +240,11 @@ mod tests {
         let _ = c.query(1, QueryType::Default);
 
         let mut custom = Frame::builder();
-            custom
-            .add(registers::Mode::write(registers::Modes::Position).unwrap());
+        custom.add(registers::Mode::write(registers::Modes::Position).unwrap());
         let _ = c.query(1, QueryType::Custom(custom));
 
         let mut custom = Frame::builder();
-        custom
-            .add(registers::Mode::write(registers::Modes::Position).unwrap());
+        custom.add(registers::Mode::write(registers::Modes::Position).unwrap());
         let _ = c.query(1, QueryType::DefaultAnd(custom));
     }
 }

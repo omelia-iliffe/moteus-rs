@@ -1,20 +1,20 @@
 //! A rust implementation of the Moteus Protocol. Used to communicate with Moteus controllers ([moteus-r4](https://mjbots.com/products/moteus-r4-11), [moteus-n1](https://mjbots.com/products/moteus-n1)) over CAN-FD.
 
 #![deny(
-bad_style,
-dead_code,
-improper_ctypes,
-non_shorthand_field_patterns,
-no_mangle_generic_items,
-overflowing_literals,
-path_statements,
-patterns_in_fns_without_body,
-unconditional_recursion,
-unused,
-unused_allocation,
-unused_comparisons,
-unused_parens,
-while_true
+    bad_style,
+    dead_code,
+    improper_ctypes,
+    non_shorthand_field_patterns,
+    no_mangle_generic_items,
+    overflowing_literals,
+    path_statements,
+    patterns_in_fns_without_body,
+    unconditional_recursion,
+    unused,
+    unused_allocation,
+    unused_comparisons,
+    unused_parens,
+    while_true
 )]
 #![deny(
 // missing_debug_implementations,
@@ -24,7 +24,7 @@ trivial_numeric_casts,
 unused_extern_crates,
 unused_import_braces,
 unused_qualifications,
-unused_results
+// unused_results
 )]
 #![warn(clippy::unwrap_used)]
 
