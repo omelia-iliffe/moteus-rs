@@ -190,6 +190,26 @@ impl Frame {
             registers: HashMap::new(),
         }
     }
+
+    /// Quickly create and alter a [`FrameBuilder`] with a closure
+    /// ### Example
+    ///
+    ///```rust
+    /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+    /// # use moteus::frame::QueryType;
+    /// # use moteus::registers::Readable;
+    /// let query = QueryType::DefaultAnd(moteus::Frame::with_builder(|b| {
+    ///     b.add(moteus::registers::Fault::read())
+    ///         .add(moteus::registers::HomeState::read());
+    /// }));
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn with_builder(f: impl FnOnce(&mut FrameBuilder) -> ()) -> FrameBuilder {
+        let mut builder = Frame::builder();
+        f(&mut builder);
+        builder
+    }
 }
 
 /// A builder for creating a [`Frame`].
@@ -222,8 +242,8 @@ impl FrameBuilder {
     /// ### Example
     /// ```rust
     /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
-    /// use moteus::*;
-    /// use moteus::registers::Writeable;
+    /// # use moteus::*;
+    /// # use moteus::registers::Writeable;
     /// let mut builder = Frame::builder();
     /// builder.try_add_many(|b| {
     ///     b.add(registers::Mode::write(registers::Modes::Position)?)
