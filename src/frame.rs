@@ -228,6 +228,7 @@ impl IntoIterator for Query {
 
 #[cfg(test)]
 mod tests {
+    #![allow(clippy::unwrap_used)]
     use fdcanusb::FdCanUSB;
 
     use super::*;
