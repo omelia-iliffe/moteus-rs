@@ -205,7 +205,7 @@ impl Frame {
     /// # Ok(())
     /// # }
     /// ```
-    pub fn with_builder(f: impl FnOnce(&mut FrameBuilder) -> ()) -> FrameBuilder {
+    pub fn with_builder(f: impl FnOnce(&mut FrameBuilder)) -> FrameBuilder {
         let mut builder = Frame::builder();
         f(&mut builder);
         builder
@@ -340,9 +340,11 @@ where
 
 #[cfg(test)]
 mod tests {
+    #![allow(clippy::unwrap_used)]
     use super::*;
     use crate::protocol::registers;
     use crate::registers::{Faults, Readable, Writeable};
+
 
     #[test]
     fn test_write_u8_subframe() {
