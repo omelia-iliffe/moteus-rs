@@ -15,17 +15,6 @@ use zerocopy::AsBytes;
 /// Used to define a register with Integers as the representation
 macro_rules! int_rw_register {
     (@IMPL_REG, $reg:ident : $addr:expr, $type:ty, $res:expr, $mapping:expr) => {
-        impl $reg {
-            /// If the instance has a value, return it. Otherwise, return None
-            pub fn value(&self) -> Option<$type> {
-                self.value
-            }
-            /// Return the resolution
-            /// This either is the resolution to be read from the register or the resolution of the value field
-            pub fn resolution(&self) -> Resolution {
-                self.resolution
-            }
-        }
         impl Writeable for $reg {
             fn write_with_resolution(data: Self::INNER, r: Resolution) -> Result<Write<Self>, RegisterError> {
                 let bytes = match r {
@@ -84,12 +73,7 @@ macro_rules! int_rw_register {
         #[doc = concat!("Struct representing the ",stringify!($reg)," register at ",stringify!($addr)," .")]
         #[doc = concat!(stringify!($reg)," can be represented as larger ints but not floats or smaller ints")]
         #[derive(Clone, Debug, PartialEq)]
-        pub struct $reg {
-            /// The value of the register
-            pub value: Option<$type>,
-            /// The resolution of the value
-            pub resolution: Resolution,
-        }
+        pub struct $reg;
 
         int_rw_register!(@INTERNAL, $reg : $addr, $type, $res, NO_MAP);
 
