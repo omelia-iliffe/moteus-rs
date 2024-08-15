@@ -3,7 +3,7 @@
 
 use crate::protocol::{Frame, FrameBuilder};
 use crate::registers::{Read, Readable, Write, Writeable};
-use crate::{registers, Resolution};
+use crate::{registers, Error, Resolution};
 
 /// Sets the mode to `registers::Modes::Stopped`.
 #[derive(Debug, Default, Clone)]
@@ -59,9 +59,12 @@ impl Position {
     }
 
     /// Use a closure to config the position frame.
-    pub fn configure<F: FnOnce(&mut Self)>(mut self, f: F) -> Self {
-        f(&mut self);
-        self
+    pub fn configure<F>(mut self, f: F) -> Result<Self, Error>
+    where
+        F: FnOnce(&mut Self) -> Result<(), Error>,
+    {
+        f(&mut self)?;
+        Ok(self)
     }
 }
 
