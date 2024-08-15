@@ -136,7 +136,7 @@ pub trait Writeable: Register {
 }
 
 /// holds the data to be written
-/// impls Into<[`RegisterDataStruct`]>
+/// impls Into<[`RegisterData`]>
 #[derive(Debug, Clone)]
 pub struct Write<R>
 where
@@ -163,7 +163,7 @@ pub trait Readable: Register {
 }
 
 /// holds the address and resolution to be read from the controller
-/// impls Into<[`RegisterDataStruct`]>
+/// impls Into<[`RegisterData`]>
 #[derive(Debug, Clone)]
 pub struct Read<R>
 where
@@ -205,7 +205,7 @@ where
 
 /// A struct that represents the raw data (as `Vec<u8>`) that has been read from, or will be written to, a register
 #[derive(Clone, PartialEq, Eq, Hash)]
-pub struct RegisterDataStruct {
+pub struct RegisterData {
     /// The [`RegisterAddr`] of the register
     pub address: RegisterAddr,
     /// The [`Resolution`] of the data
@@ -214,7 +214,7 @@ pub struct RegisterDataStruct {
     pub data: Option<Vec<u8>>,
 }
 
-impl RegisterDataStruct {
+impl RegisterData {
     pub(crate) fn as_res<R: Register>(&self) -> Result<Res<R>, RegisterError> {
         let bytes = self.data.as_ref().ok_or(RegisterError::NoData)?;
         let value = R::from_bytes(bytes, self.resolution)?;
@@ -225,8 +225,8 @@ impl RegisterDataStruct {
         addr: u16,
         bytes: &[u8],
         resolution: Resolution,
-    ) -> Result<RegisterDataStruct, RegisterError> {
-        Ok(RegisterDataStruct {
+    ) -> Result<RegisterData, RegisterError> {
+        Ok(RegisterData {
             address: RegisterAddr::from_u16(addr).ok_or(RegisterError::InvalidAddress)?,
             resolution,
             data: Some(bytes.into()),
@@ -234,7 +234,7 @@ impl RegisterDataStruct {
     }
 }
 
-impl std::fmt::Debug for RegisterDataStruct {
+impl Debug for RegisterData {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         if let Some(data) = &self.data {
             write!(f, "{:?}{:?}", &self.address, &data)
@@ -244,12 +244,12 @@ impl std::fmt::Debug for RegisterDataStruct {
     }
 }
 
-impl<R> From<Write<R>> for RegisterDataStruct
+impl<R> From<Write<R>> for RegisterData
 where
     R: Register + Writeable,
 {
-    fn from(w: Write<R>) -> RegisterDataStruct {
-        RegisterDataStruct {
+    fn from(w: Write<R>) -> RegisterData {
+        RegisterData {
             address: R::address(),
             resolution: w.resolution,
             data: Some(w.data),
@@ -257,12 +257,12 @@ where
     }
 }
 
-impl<R> From<Read<R>> for RegisterDataStruct
+impl<R> From<Read<R>> for RegisterData
 where
     R: Register + Readable,
 {
-    fn from(r: Read<R>) -> RegisterDataStruct {
-        RegisterDataStruct {
+    fn from(r: Read<R>) -> RegisterData {
+        RegisterData {
             address: R::address(),
             resolution: r.resolution,
             data: None,
@@ -1141,7 +1141,7 @@ mod tests {
 
     #[test]
     fn get_data_from_bytes() {
-        let reg = RegisterDataStruct {
+        let reg = RegisterData {
             address: RegisterAddr::Position,
             resolution: Resolution::Float,
             data: Some([1, 0, 0, 0].into()),

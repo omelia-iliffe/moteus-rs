@@ -150,7 +150,7 @@ pub struct Query {
     pub aux1_gpio: Option<Read<registers::Aux1gpioStatus>>,
     pub aux2_gpio: Option<Read<registers::Aux1gpioStatus>>,
 
-    pub extra: Option<Vec<registers::RegisterDataStruct>>,
+    pub extra: Option<Vec<registers::RegisterData>>,
 }
 
 impl Query {
@@ -162,7 +162,7 @@ impl Query {
     /// Extends the default query with extra registers.
     pub fn new_with_extra<T>(extra: T) -> Self
     where
-        T: IntoIterator<Item = registers::RegisterDataStruct>,
+        T: IntoIterator<Item = registers::RegisterData>,
     {
         Self {
             extra: Some(extra.into_iter().collect::<Vec<_>>()),
@@ -198,7 +198,7 @@ impl Default for Query {
 }
 
 impl IntoIterator for Query {
-    type Item = registers::RegisterDataStruct;
+    type Item = registers::RegisterData;
     type IntoIter = std::vec::IntoIter<Self::Item>;
 
     fn into_iter(self) -> Self::IntoIter {
@@ -221,7 +221,7 @@ impl IntoIterator for Query {
         ]
         .into_iter()
         .flatten()
-        .collect::<Vec<registers::RegisterDataStruct>>()
+        .collect::<Vec<registers::RegisterData>>()
         .into_iter()
     }
 }
