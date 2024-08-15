@@ -9,6 +9,7 @@ use crate::{RegisterError, Resolution};
 use byteorder::{ReadBytesExt, LE};
 use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
+use std::fmt::Debug;
 use std::marker::PhantomData;
 use zerocopy::AsBytes;
 
@@ -47,6 +48,7 @@ macro_rules! int_rw_register {
             type INNER = $type;
             const DEFAULT_RESOLUTION: Resolution = $res;
             const MAPPING: Map = $mapping;
+            const NAME: &'static str = stringify!($reg);
 
             fn address() -> RegisterAddr {
                 $addr
@@ -103,11 +105,13 @@ macro_rules! map_rw_register {
 /// As the Moteus Registers are each a unique struct, they all implement the [`Register`] trait.
 pub trait Register {
     /// The inner type of the register
-    type INNER;
+    type INNER: PartialEq + Debug;
     /// Each struct has a default [`Resolution`] that is used when writing to the register.
     const DEFAULT_RESOLUTION: Resolution;
     /// The mapping used to
     const MAPPING: Map;
+    /// The name of the register for use in debugging/display
+    const NAME: &'static str;
     /// Returns the address of the register as a [`RegisterAddr`].
     fn address() -> RegisterAddr;
     /// Creates the register from a slice of bytes.
@@ -174,7 +178,7 @@ where
 }
 
 /// Response Data from the moteus board
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct Res<R>
 where
     R: Register,
@@ -200,6 +204,15 @@ where
 {
     fn eq(&self, other: &Write<R>) -> bool {
         self.value == other.value
+    }
+}
+
+impl<R> Debug for Res<R>
+where
+    R: Register,
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}({:?})", R::NAME, self.value)
     }
 }
 
@@ -1144,7 +1157,7 @@ mod tests {
         let reg = RegisterData {
             address: RegisterAddr::Position,
             resolution: Resolution::Float,
-            data: Some([1, 0, 0, 0].into()),
+            data: Some([0, 0, 0, 64].into()),
         };
         let data = reg.as_res::<Position>().unwrap();
         dbg!(&data);
