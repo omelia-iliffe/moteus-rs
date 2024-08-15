@@ -3,6 +3,7 @@
 
 use crate::protocol::{Frame, FrameBuilder};
 use crate::{registers, Resolution};
+use crate::registers::{Read, Readable, Write, Writeable};
 
 /// Sets the mode to `registers::Modes::Stopped`.
 #[derive(Debug, Default, Clone)]
@@ -10,7 +11,7 @@ pub struct Stop;
 
 impl From<Stop> for FrameBuilder {
     fn from(_: Stop) -> FrameBuilder {
-        Frame::builder().add_registers([registers::Mode::write(registers::Modes::Stopped).into()])
+        Frame::builder().add_registers([registers::Mode::write(registers::Modes::Stopped).unwrap().into()])
     }
 }
 
@@ -23,34 +24,34 @@ impl From<Stop> for FrameBuilder {
 #[derive(Debug, Default, Clone)]
 pub struct Position {
     /// The `position` field is used to set the [`registers::CommandPosition`] of the motor.
-    pub position: Option<registers::CommandPosition>,
+    pub position: Option<Write<registers::CommandPosition>>,
     /// The `velocity` field is used to set the [`registers::CommandVelocity`] of the motor.
-    pub velocity: Option<registers::CommandVelocity>,
+    pub velocity: Option<Write<registers::CommandVelocity>>,
     /// The `feedforward_torque` field is used to set the [`registers::CommandFeedforwardTorque`] of the motor.
-    pub feedforward_torque: Option<registers::CommandFeedforwardTorque>,
+    pub feedforward_torque: Option<Write<registers::CommandFeedforwardTorque>>,
     /// The `kp_scale` field is used to set the [`registers::CommandKpScale`] of the motor.
-    pub kp_scale: Option<registers::CommandKpScale>,
+    pub kp_scale: Option<Write<registers::CommandKpScale>>,
     /// The `kd_scale` field is used to set the [`registers::CommandKdScale`] of the motor.
-    pub kd_scale: Option<registers::CommandKdScale>,
+    pub kd_scale: Option<Write<registers::CommandKdScale>>,
     /// The `maximum_torque` field is used to set the [`registers::CommandPositionMaxTorque`] of the motor.
-    pub maximum_torque: Option<registers::CommandPositionMaxTorque>,
+    pub maximum_torque: Option<Write<registers::CommandPositionMaxTorque>>,
     /// The `stop_position` field is used to set the [`registers::CommandStopPosition`] of the motor.
-    pub stop_position: Option<registers::CommandStopPosition>,
+    pub stop_position: Option<Write<registers::CommandStopPosition>>,
     /// The `watchdog_timeout` field is used to set the [`registers::CommandTimeout`] of the motor.
-    pub watchdog_timeout: Option<registers::CommandTimeout>,
+    pub watchdog_timeout: Option<Write<registers::CommandTimeout>>,
     /// The `velocity_limit` field is used to set the [`registers::VelocityLimit`] of the motor.
-    pub velocity_limit: Option<registers::VelocityLimit>,
+    pub velocity_limit: Option<Write<registers::VelocityLimit>>,
     /// The `acceleration_limit` field is used to set the [`registers::AccelerationLimit`] of the motor.
-    pub acceleration_limit: Option<registers::AccelerationLimit>,
+    pub acceleration_limit: Option<Write<registers::AccelerationLimit>>,
     /// The `fixed_voltage_override` field is used to set the [`registers::FixedVoltage`] of the motor.
-    pub fixed_voltage_override: Option<registers::FixedVoltage>,
+    pub fixed_voltage_override: Option<Write<registers::FixedVoltage>>,
 }
 
 impl Position {
     /// Sets the [`registers::CommandPosition`] to `f32::NAN` to hold the current position.
     pub fn hold() -> Self {
         Self {
-            position: Some(registers::CommandPosition::write(f32::NAN)),
+            position: Some(registers::CommandPosition::write(f32::NAN).unwrap()),
             ..Self::default()
         }
     }
@@ -68,7 +69,7 @@ impl IntoIterator for Position {
 
     fn into_iter(self) -> Self::IntoIter {
         vec![
-            Some(registers::Mode::write(registers::Modes::Position).into()),
+            Some(registers::Mode::write(registers::Modes::Position).unwrap().into()),
             self.position.map(|p| p.into()),
             self.velocity.map(|v| v.into()),
             self.feedforward_torque.map(|f| f.into()),
@@ -113,22 +114,22 @@ pub enum QueryType {
 #[derive(Debug, Clone)]
 #[allow(missing_docs)]
 pub struct Query {
-    pub mode: Option<registers::Mode>,
-    pub position: Option<registers::Position>,
-    pub velocity: Option<registers::Velocity>,
-    pub torque: Option<registers::Torque>,
-    pub q_current: Option<registers::QCurrent>,
-    pub d_current: Option<registers::DCurrent>,
-    pub abs_position: Option<registers::AbsPosition>,
-    pub motor_temperature: Option<registers::MotorTemperature>,
-    pub trajectory_complete: Option<registers::TrajectoryComplete>,
+    pub mode: Option<Read<registers::Mode>>,
+    pub position: Option<Read<registers::Position>>,
+    pub velocity: Option<Read<registers::Velocity>>,
+    pub torque: Option<Read<registers::Torque>>,
+    pub q_current: Option<Read<registers::QCurrent>>,
+    pub d_current: Option<Read<registers::DCurrent>>,
+    pub abs_position: Option<Read<registers::AbsPosition>>,
+    pub motor_temperature: Option<Read<registers::MotorTemperature>>,
+    pub trajectory_complete: Option<Read<registers::TrajectoryComplete>>,
     // rezero_state: Option<registers::RezeroState>,
-    pub home_state: Option<registers::HomeState>,
-    pub voltage: Option<registers::Voltage>,
-    pub temperature: Option<registers::Temperature>,
-    pub fault: Option<registers::Fault>,
-    pub aux1_gpio: Option<registers::Aux1gpioStatus>,
-    pub aux2_gpio: Option<registers::Aux1gpioStatus>,
+    pub home_state: Option<Read<registers::HomeState>>,
+    pub voltage: Option<Read<registers::Voltage>>,
+    pub temperature: Option<Read<registers::Temperature>>,
+    pub fault: Option<Read<registers::Fault>>,
+    pub aux1_gpio: Option<Read<registers::Aux1gpioStatus>>,
+    pub aux2_gpio: Option<Read<registers::Aux1gpioStatus>>,
 
     pub extra: Option<Vec<registers::RegisterDataStruct>>,
 }
@@ -223,11 +224,11 @@ mod tests {
         let _ = c.query(1, QueryType::Default);
 
         let custom = Frame::builder()
-            .add_registers([registers::Mode::write(registers::Modes::Position).into()]);
+            .add_registers([registers::Mode::write(registers::Modes::Position).unwrap().into()]);
         let _ = c.query(1, QueryType::Custom(custom));
 
         let custom = Frame::builder()
-            .add_registers([registers::Mode::write(registers::Modes::Position).into()]);
+            .add_registers([registers::Mode::write(registers::Modes::Position).unwrap().into()]);
         let _ = c.query(1, QueryType::DefaultAnd(custom));
     }
 }

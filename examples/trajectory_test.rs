@@ -39,12 +39,12 @@ fn main() -> Result<(), moteus::Error> {
             CommandPosition::write(-0.5)
         } else {
             CommandPosition::write(0.5)
-        };
+        }?;
         let command = moteus::frame::Position {
             position: Some(position),
-            velocity: Some(CommandVelocity::write(0.0)),
-            velocity_limit: Some(VelocityLimit::write(8.0)),
-            acceleration_limit: Some(AccelerationLimit::write(3.0)),
+            velocity: Some(CommandVelocity::write(0.0)?),
+            velocity_limit: Some(VelocityLimit::write(8.0)?),
+            acceleration_limit: Some(AccelerationLimit::write(3.0)?),
             ..Default::default()
         };
 

@@ -19,6 +19,9 @@ pub enum Error {
     /// FrameParse errors occur when parsing frames from invalid bytes.
     #[error("frame parse error: {0}")]
     FrameParse(#[from] FrameParseError),
+    /// RegisterErrors occur when creating Write<Register> structs
+    #[error("register error: {0}")]
+    RegisterError(#[from] RegisterError),
     /// No response was received.
     #[error("no response")]
     NoResponse,
