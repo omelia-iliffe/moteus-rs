@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use crate::error::FrameError;
 use crate::protocol::registers::{FrameRegisters, RegisterDataStruct};
-use crate::registers::{Register, RegisterAddr};
+use crate::registers::{Register, RegisterAddr, Res};
 use crate::{FrameParseError, Resolution};
 use fdcanusb::CanFdFrame;
 use itertools::Itertools;
@@ -143,12 +143,12 @@ impl ResponseFrame {
 
     /// Get a register from the response frame
     /// If the register `R` is not found in the response frame [`None`] is returned.
-    pub fn get<R: Register>(&self) -> Option<R> {
+    pub fn get<R: Register>(&self) -> Option<Res<R>> {
         let register = R::address();
         self.0
             .iter()
             .find(|reg| reg.address == register)
-            .and_then(|reg| reg.as_reg::<R>().ok())
+            .and_then(|reg| reg.as_res::<R>().ok())
     }
 
     /// Get many registers from the response frame
@@ -222,8 +222,8 @@ impl FrameBuilder {
     /// ```rust
     /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
     /// use moteus::*;
-    /// use registers::RegisterData;
-    /// let frame = Frame::builder().add_registers([registers::Mode::write(registers::Modes::Position).into(), registers::CommandPosition::write(0.0).into()]).build();
+    /// use moteus::registers::Writeable;
+    /// let frame = Frame::builder().add_registers([registers::Mode::write(registers::Modes::Position).unwrap().into(), registers::CommandPosition::write(0.0).unwrap().into()]).build();
     /// # Ok(())
     /// # }
     pub fn add_registers<R>(self, registers: R) -> Self
@@ -315,13 +315,13 @@ where
 mod tests {
     use super::*;
     use crate::protocol::registers;
-    use crate::registers::Faults;
+    use crate::registers::{Faults, Readable, Writeable};
 
     #[test]
     fn test_write_u8_subframe() {
         let mut subframe = SubFrame::new(FrameRegisters::WriteInt8, 1);
         subframe
-            .add(registers::Mode::write(registers::Modes::Stopped).into())
+            .add(registers::Mode::write(registers::Modes::Stopped).unwrap().into())
             .expect("Failed to add register");
         let bytes = subframe
             .as_bytes()
@@ -340,14 +340,14 @@ mod tests {
     fn test_write_u16_subframe() {
         let mut subframe: SubFrame = SubFrame::new(FrameRegisters::WriteInt16, 3);
         subframe
-            .add(registers::CommandPosition::write_with_resolution(2.0, Resolution::Int16).into())
+            .add(registers::CommandPosition::write_with_resolution(2.0, Resolution::Int16).unwrap().into())
             .expect("Failed to add register");
         subframe
-            .add(registers::CommandVelocity::write_with_resolution(2.0, Resolution::Int16).into())
+            .add(registers::CommandVelocity::write_with_resolution(2.0, Resolution::Int16).unwrap().into())
             .expect("Failed to add register");
         subframe
             .add(
-                registers::CommandFeedforwardTorque::write_with_resolution(2.0, Resolution::Int16)
+                registers::CommandFeedforwardTorque::write_with_resolution(2.0, Resolution::Int16).unwrap()
                     .into(),
             )
             .expect("Failed to add register");
@@ -408,9 +408,9 @@ mod tests {
         assert_eq!(
             subframe.data,
             vec![
-                registers::Voltage::write_with_resolution(12.0, Resolution::Int8).into(),
-                registers::Temperature::write_with_resolution(20.0, Resolution::Int8).into(),
-                registers::Fault::write(Faults::Success).into(),
+                registers::Voltage::write_with_resolution(12.0, Resolution::Int8).unwrap().into(),
+                registers::Temperature::write_with_resolution(20.0, Resolution::Int8).unwrap().into(),
+                registers::Fault::write(Faults::Success).unwrap().into(),
             ]
         );
     }
@@ -429,11 +429,11 @@ mod tests {
                 registers::Mode::write_with_resolution(
                     registers::Modes::Position,
                     Resolution::Int16,
-                )
+                ).unwrap()
                 .into(),
-                registers::Position::write_with_resolution(0.01, Resolution::Int16).into(),
-                registers::Velocity::write_with_resolution(0.1, Resolution::Int16).into(),
-                registers::Torque::write_with_resolution(-144.0, Resolution::Int16).into(),
+                registers::Position::write_with_resolution(0.01, Resolution::Int16).unwrap().into(),
+                registers::Velocity::write_with_resolution(0.1, Resolution::Int16).unwrap().into(),
+                registers::Torque::write_with_resolution(-144.0, Resolution::Int16).unwrap().into(),
             ]
         );
     }
@@ -445,13 +445,13 @@ mod tests {
         ];
         let frame = ResponseFrame::from_bytes(&buf).expect("Failed to parse response frame");
         assert_eq!(
-            frame.get(),
-            Some(registers::Mode::write(registers::Modes::Position))
+            frame.get::<registers::Mode>().unwrap(),
+            registers::Mode::write(registers::Modes::Position).unwrap()
         ); // type returned from frame.get() is inferred.
         assert_eq!(
             frame
                 .get::<registers::CommandPosition>()
-                .and_then(|r| r.value()),
+                .map(|r| r.value()),
             Some(1.0)
         ); //use the turbofish syntax when the type cannot be inferred.
     }
@@ -460,9 +460,9 @@ mod tests {
     fn multi_subframes_into_bytes() {
         let frame: Frame = Frame::builder()
             .add_registers([
-                registers::CommandPosition::write_with_resolution(1.0, Resolution::Int16).into(),
-                registers::CommandVelocity::write_with_resolution(0.0, Resolution::Int16).into(),
-                registers::CommandFeedforwardTorque::write_with_resolution(-2.0, Resolution::Int16)
+                registers::CommandPosition::write_with_resolution(1.0, Resolution::Int16).unwrap().into(),
+                registers::CommandVelocity::write_with_resolution(0.0, Resolution::Int16).unwrap().into(),
+                registers::CommandFeedforwardTorque::write_with_resolution(-2.0, Resolution::Int16).unwrap()
                     .into(),
                 registers::Voltage::read_with_resolution(Resolution::Int8).into(),
                 registers::Temperature::read_with_resolution(Resolution::Int8).into(),
