@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use crate::error::FrameError;
-use crate::protocol::registers::{FrameRegisters, RegisterDataStruct};
+use crate::protocol::registers::{FrameRegisters, RegisterData};
 use crate::registers::{Register, RegisterAddr, Res};
 use crate::{FrameParseError, Resolution};
 use fdcanusb::CanFdFrame;
@@ -12,7 +12,7 @@ use num_traits::FromPrimitive;
 pub struct SubFrame {
     register: FrameRegisters,
     len: u8,
-    data: Vec<RegisterDataStruct>,
+    data: Vec<RegisterData>,
 }
 
 impl SubFrame {
@@ -24,7 +24,7 @@ impl SubFrame {
         }
     }
 
-    fn add(&mut self, register: RegisterDataStruct) -> Result<(), FrameError> {
+    fn add(&mut self, register: RegisterData) -> Result<(), FrameError> {
         if let Some(prev_reg) = self.data.last() {
             if (prev_reg.address as u16) + 1 != register.address as u16 {
                 return Err(FrameError::NonSequentialRegisters);
@@ -100,7 +100,7 @@ impl SubFrame {
                 let reg_addr = initial_reg as u16 + reg_index as u16;
 
                 let reg =
-                    RegisterDataStruct::from_bytes(reg_addr, &buf[i..i + index_step], resolution)?;
+                    RegisterData::from_bytes(reg_addr, &buf[i..i + index_step], resolution)?;
                 data.push(reg);
             }
             data
@@ -120,7 +120,7 @@ impl SubFrame {
 /// The registers can be accessed by their type using the `get` method.
 /// Many registers can be accessed at once using the `get_many` method.
 #[derive(Debug, PartialEq)]
-pub struct ResponseFrame(Vec<RegisterDataStruct>);
+pub struct ResponseFrame(Vec<RegisterData>);
 
 impl ResponseFrame {
     pub(crate) fn from_bytes(buf: &[u8]) -> Result<ResponseFrame, FrameParseError> {
@@ -220,7 +220,7 @@ impl Frame {
 /// Duplicate registers are overwritten without warning.
 #[derive(Debug, PartialEq, Clone)]
 pub struct FrameBuilder {
-    registers: HashMap<FrameRegisters, HashMap<RegisterAddr, RegisterDataStruct>>,
+    registers: HashMap<FrameRegisters, HashMap<RegisterAddr, RegisterData>>,
 }
 
 impl FrameBuilder {
@@ -262,7 +262,7 @@ impl FrameBuilder {
     }
 
     /// Add a single register to the frame
-    pub fn add(&mut self, reg: impl Into<RegisterDataStruct>) -> &mut Self {
+    pub fn add(&mut self, reg: impl Into<RegisterData>) -> &mut Self {
         let reg = reg.into();
         let r = FrameBuilder::frame_register(reg.resolution, reg.data.is_none());
         let _ = self
@@ -294,7 +294,7 @@ impl FrameBuilder {
             .sorted_by_key(|(k, _)| *k as u8)
             .flat_map(|(frame_register, regs)| {
                 let mut subframes = Vec::new();
-                let mut regs: Vec<(RegisterAddr, RegisterDataStruct)> = regs.into_iter().collect();
+                let mut regs: Vec<(RegisterAddr, RegisterData)> = regs.into_iter().collect();
                 regs.sort_by_key(|(k, _)| *k as u8);
                 let mut regs = regs.into_iter().peekable();
                 let mut base_reg = regs.peek().unwrap().0 as u8; // This `unwrap()` cannot fail when using pub API
@@ -324,10 +324,10 @@ impl FrameBuilder {
 
 impl<R> From<R> for FrameBuilder
 where
-    R: IntoIterator<Item = RegisterDataStruct>,
+    R: IntoIterator<Item = RegisterData>,
 {
     fn from(registers: R) -> Self {
-        let registers: HashMap<FrameRegisters, HashMap<RegisterAddr, RegisterDataStruct>> =
+        let registers: HashMap<FrameRegisters, HashMap<RegisterAddr, RegisterData>> =
             registers.into_iter().fold(HashMap::new(), |mut acc, reg| {
                 let r = FrameBuilder::frame_register(reg.resolution, reg.data.is_none());
                 let _ = acc.entry(r).or_default().insert(reg.address, reg);
