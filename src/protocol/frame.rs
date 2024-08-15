@@ -216,26 +216,28 @@ impl FrameBuilder {
             (Resolution::Float, false) => FrameRegisters::WriteF32,
         }
     }
-    /// Add multiple register to the frame
+
+    /// Use a closure that returns [`crate::Error`] to add multiple registers to the frame. Used when constructing write registers.
     ///
     /// ### Example
     /// ```rust
     /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
     /// use moteus::*;
     /// use moteus::registers::Writeable;
-    /// let frame = Frame::builder().add_registers([registers::Mode::write(registers::Modes::Position).unwrap().into(), registers::CommandPosition::write(0.0).unwrap().into()]).build();
+    /// let mut builder = Frame::builder();
+    /// builder.try_add_many(|b| {
+    /// b.add(registers::Mode::write(registers::Modes::Position)?).add(registers::CommandPosition::write(0.0)?)
+    /// })?;
+    /// builder.build();
     /// # Ok(())
     /// # }
-    pub fn add_registers<R>(self, registers: R) -> Self
-    where
-        R: IntoIterator<Item = RegisterDataStruct>,
-    {
-        let new = FrameBuilder::from(registers);
-        self.merge(new)
+    pub fn try_add_many(&mut self, f: impl FnOnce(&mut Self) -> Result<(), crate::Error>) -> Result<&mut Self, crate::Error> {
+        f(self)?;
+        Ok(self)
     }
 
     /// Add a single register to the frame
-    pub fn add_register(mut self, reg: impl Into<RegisterDataStruct>) -> Self {
+    pub fn add(&mut self, reg: impl Into<RegisterDataStruct>) -> &mut Self {
         let reg = reg.into();
         let r = FrameBuilder::frame_register(reg.resolution, reg.data.is_none());
         let _ = self
@@ -458,17 +460,18 @@ mod tests {
 
     #[test]
     fn multi_subframes_into_bytes() {
-        let frame: Frame = Frame::builder()
-            .add_registers([
-                registers::CommandPosition::write_with_resolution(1.0, Resolution::Int16).unwrap().into(),
-                registers::CommandVelocity::write_with_resolution(0.0, Resolution::Int16).unwrap().into(),
-                registers::CommandFeedforwardTorque::write_with_resolution(-2.0, Resolution::Int16).unwrap()
-                    .into(),
-                registers::Voltage::read_with_resolution(Resolution::Int8).into(),
-                registers::Temperature::read_with_resolution(Resolution::Int8).into(),
-                registers::Fault::read_with_resolution(Resolution::Int8).into(),
-            ])
-            .build();
+        let mut builder = Frame::builder();
+
+            builder.try_add_many(|f| {
+                f.add(registers::CommandPosition::write_with_resolution(1.0, Resolution::Int16)?)
+                .add(registers::CommandVelocity::write_with_resolution(0.0, Resolution::Int16)?)
+                .add(registers::CommandFeedforwardTorque::write_with_resolution(-2.0, Resolution::Int16)?)
+                .add(registers::Voltage::read_with_resolution(Resolution::Int8))
+                .add(registers::Temperature::read_with_resolution(Resolution::Int8))
+                .add(registers::Fault::read_with_resolution(Resolution::Int8));
+                Ok(())
+            }).unwrap();
+        let frame = builder.build();
         let bytes = frame.as_bytes().expect("Unable to convert frame to bytes");
         assert_eq!(bytes, vec![0x07, 0x20, 16, 39, 0, 0, 56, 255, 19, 13]);
     }
