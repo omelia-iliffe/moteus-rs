@@ -71,6 +71,7 @@ impl Position {
 impl From<Position> for FrameBuilder {
     fn from(position: Position) -> Self {
         let mut builder = Frame::builder();
+        builder.add(registers::Mode::write(registers::Modes::Position).unwrap());
         if let Some(p) = position.position {
             builder.add(p);
         }
@@ -197,39 +198,70 @@ impl Default for Query {
     }
 }
 
-impl IntoIterator for Query {
-    type Item = registers::RegisterData;
-    type IntoIter = std::vec::IntoIter<Self::Item>;
-
-    fn into_iter(self) -> Self::IntoIter {
-        vec![
-            self.mode.map(|m| m.into()),
-            self.position.map(|p| p.into()),
-            self.velocity.map(|v| v.into()),
-            self.torque.map(|f| f.into()),
-            self.q_current.map(|k| k.into()),
-            self.d_current.map(|k| k.into()),
-            self.abs_position.map(|m| m.into()),
-            self.motor_temperature.map(|s| s.into()),
-            self.trajectory_complete.map(|w| w.into()),
-            self.home_state.map(|v| v.into()),
-            self.voltage.map(|a| a.into()),
-            self.temperature.map(|f| f.into()),
-            self.fault.map(|f| f.into()),
-            self.aux1_gpio.map(|f| f.into()),
-            self.aux2_gpio.map(|f| f.into()),
-        ]
-        .into_iter()
-        .flatten()
-        .collect::<Vec<registers::RegisterData>>()
-        .into_iter()
+impl From<Query> for FrameBuilder {
+    fn from(query: Query) -> Self {
+        let mut builder = Frame::builder();
+        if let Some(m) = query.mode {
+            builder.add(m);
+        }
+        if let Some(p) = query.position {
+            builder.add(p);
+        }
+        if let Some(v) = query.velocity {
+            builder.add(v);
+        }
+        if let Some(t) = query.torque {
+            builder.add(t);
+        }
+        if let Some(q) = query.q_current {
+            builder.add(q);
+        }
+        if let Some(d) = query.d_current {
+            builder.add(d);
+        }
+        if let Some(a) = query.abs_position {
+            builder.add(a);
+        }
+        if let Some(m) = query.motor_temperature {
+            builder.add(m);
+        }
+        if let Some(t) = query.trajectory_complete {
+            builder.add(t);
+        }
+        // if let Some(r) = query.rezero_state {
+        //     builder.add(r);
+        // }
+        if let Some(h) = query.home_state {
+            builder.add(h);
+        }
+        if let Some(v) = query.voltage {
+            builder.add(v);
+        }
+        if let Some(t) = query.temperature {
+            builder.add(t);
+        }
+        if let Some(f) = query.fault {
+            builder.add(f);
+        }
+        if let Some(a) = query.aux1_gpio {
+            builder.add(a);
+        }
+        if let Some(a) = query.aux2_gpio {
+            builder.add(a);
+        }
+        if let Some(extra) = query.extra {
+            for e in extra {
+                builder.add(e);
+            }
+        }
+        builder
     }
 }
 
 #[cfg(test)]
 mod tests {
     #![allow(clippy::unwrap_used)]
-    use fdcanusb::FdCanUSB;
+    use fdcanusb::{CanFdFrame, FdCanUSB, FdCanUSBFrame};
 
     use super::*;
 
@@ -250,5 +282,16 @@ mod tests {
         let mut custom = Frame::builder();
         custom.add(registers::Mode::write(registers::Modes::Position).unwrap());
         let _ = c.query(1, QueryType::DefaultAnd(custom));
+    }
+
+    #[test]
+    fn test_query_parse() {
+
+
+        let recv: FdCanUSBFrame = "rcv 8001 01000A0E20000000BF000000000E2800000041000040401100130D1F011C0638505050\n".into();
+        let frame = CanFdFrame::try_from(recv).unwrap();
+        let frame: crate::ResponseFrame = frame.try_into().unwrap();
+        dbg!(frame);
+
     }
 }
