@@ -322,22 +322,6 @@ impl FrameBuilder {
     }
 }
 
-impl<R> From<R> for FrameBuilder
-where
-    R: IntoIterator<Item = RegisterData>,
-{
-    fn from(registers: R) -> Self {
-        let registers: HashMap<FrameRegisters, HashMap<RegisterAddr, RegisterData>> =
-            registers.into_iter().fold(HashMap::new(), |mut acc, reg| {
-                let r = FrameBuilder::frame_register(reg.resolution, reg.data.is_none());
-                let _ = acc.entry(r).or_default().insert(reg.address, reg);
-
-                acc
-            });
-        FrameBuilder { registers }
-    }
-}
-
 #[cfg(test)]
 mod tests {
     #![allow(clippy::unwrap_used)]
