@@ -1,3 +1,7 @@
+# Version 0.3.0 - 04-09-2024
+- **Major**: Added `Write`, `Read` and `Res` wrapper types to improve ergonomics.
+- **Major**: Changed `write` method to correctly return a `Result` instead of panicking or creating invariants.
+- **Major**: Renamed `FrameBuilder::add_register` to `FrameBuilder::add` and added `try_add_many` method to add multiple registers at once.
 # Version 0.2.1 - 20-08-2024
 - **Minor**: Updated fdcanusb to 0.6.0
 # Version 0.2.0 - 09-08-2024

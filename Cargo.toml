@@ -1,6 +1,6 @@
 [package]
 name = "moteus"
-version = "0.2.1"
+version = "0.3.0"
 edition = "2021"
 license = "Apache-2.0"
 readme = "README.md"
@@ -9,7 +9,7 @@ description = "Rust library for interfacing with Moteus controllers"
 
 [dependencies]
 hex = "0.4.3"
-fdcanusb = { version = "0.6.0", default-features = false}
+fdcanusb = { version = "0.6.1", default-features = false }
 byteorder = "1.5.0"
 zerocopy = { version = "0.7.32", features = ["derive"] }
 num-traits = "0.2.18"
