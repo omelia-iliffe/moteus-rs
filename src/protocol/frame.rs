@@ -483,7 +483,9 @@ mod tests {
         let frame = ResponseFrame::from_bytes(&buf).expect("Failed to parse response frame");
         assert_eq!(
             frame.get::<registers::Mode>().unwrap(),
-            registers::Mode::write(registers::Modes::Position).unwrap()
+            Res::<registers::Mode> {
+                value: registers::Modes::Position,
+            }
         ); // type returned from frame.get() is inferred.
         assert_eq!(
             frame.get::<registers::CommandPosition>().map(|r| r.value()),

@@ -28,7 +28,7 @@ macro_rules! int_rw_register {
                 }?;
 
                 Ok(Write {
-                    value:data,
+                    register: PhantomData,
                     resolution: r,
                     data:bytes,
                 })
@@ -144,9 +144,9 @@ pub trait Writeable: Register {
 #[derive(Debug, Clone)]
 pub struct Write<R>
 where
-    R: Register,
+    R: Register + Writeable,
 {
-    value: R::INNER,
+    register: PhantomData<R>,
     resolution: Resolution,
     data: Vec<u8>,
 }
@@ -183,7 +183,7 @@ pub struct Res<R>
 where
     R: Register,
 {
-    value: R::INNER,
+    pub(crate) value: R::INNER,
 }
 
 impl<R> Res<R>
@@ -197,12 +197,12 @@ where
     }
 }
 
-impl<R> PartialEq<Write<R>> for Res<R>
+impl<R> PartialEq<Res<R>> for Res<R>
 where
     R: Register,
     R::INNER: PartialEq,
 {
-    fn eq(&self, other: &Write<R>) -> bool {
+    fn eq(&self, other: &Res<R>) -> bool {
         self.value == other.value
     }
 }
@@ -1037,7 +1037,7 @@ mod tests {
         let data = position.data;
         assert_eq!(data, vec![0, 0, 0, 64]);
         let from_data = Position::from_bytes(&data, Resolution::Float).unwrap();
-        assert_eq!(from_data, Position::write(2.0).unwrap().value);
+        assert_eq!(from_data, 2.0);
 
         let data = Position::write_with_resolution(2.0, Resolution::Int8);
         assert!(data.is_err()); // OVERFLOW
@@ -1058,7 +1058,7 @@ mod tests {
         let data = position.unwrap().data;
         assert_eq!(data, vec![0, 0, 0, 192]);
         let from_data = Position::from_bytes(&data, Resolution::Float).unwrap();
-        assert_eq!(from_data, Position::write(-2.0).unwrap().value);
+        assert_eq!(from_data, -2.0);
 
         let data = Position::write_with_resolution(-2.0, Resolution::Int8);
         assert!(data.is_err()); // OVERFLOW
@@ -1083,7 +1083,7 @@ mod tests {
             .data;
         assert_eq!(data, vec![6]);
         let data = Mode::from_bytes(&data, Resolution::Int8).unwrap();
-        assert_eq!(data, Mode::write(Modes::Voltage).unwrap().value);
+        assert_eq!(data, Modes::Voltage);
         let data = Mode::write_with_resolution(Modes::Voltage, Resolution::Int16)
             .unwrap()
             .data;
