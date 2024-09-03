@@ -12,7 +12,7 @@ pub struct Stop;
 impl From<Stop> for FrameBuilder {
     fn from(_: Stop) -> FrameBuilder {
         let mut builder = Frame::builder();
-        builder.add(registers::Mode::write(registers::Modes::Stopped).unwrap());
+        builder.add(registers::Mode::write(registers::Modes::Stopped).expect("tested infallible"));
         builder
     }
 }
@@ -53,7 +53,7 @@ impl Position {
     /// Sets the [`registers::CommandPosition`] to `f32::NAN` to hold the current position.
     pub fn hold() -> Self {
         Self {
-            position: Some(registers::CommandPosition::write(f32::NAN).unwrap()),
+            position: Some(registers::CommandPosition::write(f32::NAN).expect("tested infallible")),
             ..Self::default()
         }
     }
@@ -71,7 +71,7 @@ impl Position {
 impl From<Position> for FrameBuilder {
     fn from(position: Position) -> Self {
         let mut builder = Frame::builder();
-        builder.add(registers::Mode::write(registers::Modes::Position).unwrap());
+        builder.add(registers::Mode::write(registers::Modes::Position).expect("tested infallible"));
         if let Some(p) = position.position {
             builder.add(p);
         }
@@ -262,7 +262,6 @@ impl From<Query> for FrameBuilder {
 mod tests {
     #![allow(clippy::unwrap_used)]
     use fdcanusb::{CanFdFrame, FdCanUSB, FdCanUSBFrame};
-
     use super::*;
 
     /// Will fail unless a motor is connected with id 1.
@@ -293,5 +292,12 @@ mod tests {
         let frame: crate::ResponseFrame = frame.try_into().unwrap();
         dbg!(frame);
 
+    }
+
+    #[test]
+    fn test_infallible_writes() {
+        let _: FrameBuilder = Stop.into();
+        let _: FrameBuilder = Position::hold().into();
+        let _: FrameBuilder = Position::default().into();
     }
 }
