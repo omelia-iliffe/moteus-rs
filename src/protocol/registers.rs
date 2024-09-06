@@ -480,6 +480,11 @@ pub enum RegisterAddr {
 
     EncoderValidity = 0x058,
 
+    #[cfg(feature = "aux_index_raw")]
+    Aux1IndexRaw = 0x059,
+    #[cfg(feature = "aux_index_raw")]
+    Aux2IndexRaw = 0x05a,
+
     Aux1gpioCommand = 0x05c,
     Aux2gpioCommand = 0x05d,
     Aux1gpioStatus = 0x05e,
@@ -586,6 +591,11 @@ map_rw_register!(Encoder2position: RegisterAddr::Encoder2position, POSITION_MAP)
 map_rw_register!(Encoder2velocity: RegisterAddr::Encoder2velocity, VELOCITY_MAP);
 
 int_rw_register!(EncoderValidity: RegisterAddr::EncoderValidity, i8, Resolution::Int8);
+
+#[cfg(feature = "aux_index_raw")]
+int_rw_register!(Aux1IndexRaw: RegisterAddr::Aux1IndexRaw, i8, Resolution::Int8);
+#[cfg(feature = "aux_index_raw")]
+int_rw_register!(Aux2IndexRaw: RegisterAddr::Aux2IndexRaw, i8, Resolution::Int8);
 
 int_rw_register!(Aux1gpioCommand: RegisterAddr::Aux1gpioCommand, i8, Resolution::Int8);
 int_rw_register!(Aux2gpioCommand: RegisterAddr::Aux2gpioCommand, i8, Resolution::Int8);

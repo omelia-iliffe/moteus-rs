@@ -1,3 +1,6 @@
+# Version 0.3.1 - 06-09-2024
+- **Minor**: Fixed `disable_brs` field not doing anything
+- **Minor**: Added feature `aux_index_raw` to read the custom aux_index_raw register, see my fork of the moteus firmware for more information.
 # Version 0.3.0 - 04-09-2024
 - **Major**: Added `Write`, `Read` and `Res` wrapper types to improve ergonomics.
 - **Major**: Changed `write` method to correctly return a `Result` instead of panicking or creating invariants.

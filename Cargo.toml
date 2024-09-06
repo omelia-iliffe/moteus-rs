@@ -24,3 +24,4 @@ thiserror = "1.0.63"
 default = ["serial2"]
 serial2 = ["fdcanusb/serial2"]
 log = ["fdcanusb/log"]
+aux_index_raw = []
