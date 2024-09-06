@@ -161,11 +161,12 @@ dependencies = [
 
 [[package]]
 name = "fdcanusb"
-version = "0.6.1"
+version = "0.6.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0c7815e459464adb5fbc00d7f04ea41512bb648db14a9c2424097c74afd84501"
+checksum = "2caf56bd3ec3fe45f69d31cd90962f4c92419894748a9bc8e93f0c21b9f1f677"
 dependencies = [
  "hex",
+ "log",
  "serial2",
  "thiserror",
 ]
@@ -243,7 +244,7 @@ checksum = "523dc4f511e55ab87b694dc30d0f820d60906ef06413f93d4d7a1385599cc149"
 
 [[package]]
 name = "moteus"
-version = "0.3.0"
+version = "0.3.1"
 dependencies = [
  "byteorder",
  "chrono",

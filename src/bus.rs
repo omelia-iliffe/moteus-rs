@@ -151,10 +151,12 @@ where
     {
         let frame = frame.into();
         let arbitration_id = id as u16;
-        let frame = CanFdFrame::new(
+        let frame = CanFdFrame {
             arbitration_id,
-            &frame.as_bytes().expect("Could not convert frame to bytes"),
-        )?;
+            data: frame.as_bytes()?,
+            brs: Some(!self.disable_brs),
+            ..Default::default()
+        };
         let _ = self.transport.transfer_single(frame, false)?;
         Ok(())
     }
@@ -164,7 +166,12 @@ where
     {
         let frame = frame.into();
         let arbitration_id = id as u16 | 0x8000;
-        let frame = CanFdFrame::new(arbitration_id, &frame.as_bytes()?)?;
+        let frame = CanFdFrame {
+            arbitration_id,
+            data: frame.as_bytes()?,
+            brs: Some(!self.disable_brs),
+            ..Default::default()
+        };
         let response = self.transport.transfer_single(frame, true)?;
         let response = response.ok_or(Error::NoResponse)?;
         Ok(response.try_into()?)
