@@ -8,7 +8,7 @@ use fdcanusb::FdCanUSB;
 use moteus::frame::QueryType;
 use moteus::{registers, Controller};
 
-fn main() -> Result<(), moteus::Error> {
+fn main() -> Result<(), Box<dyn std::error::Error>> {
     env_logger::Builder::from_default_env().init();
     // By default, the Controller connects to id 1, and picks an arbitrary
     // CAN-FD transport, prefering an attached fdcanusb if available.

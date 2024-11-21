@@ -99,8 +99,7 @@ impl SubFrame {
             for (reg_index, i) in (start..end).step_by(index_step).enumerate() {
                 let reg_addr = initial_reg as u16 + reg_index as u16;
 
-                let reg =
-                    RegisterData::from_bytes(reg_addr, &buf[i..i + index_step], resolution)?;
+                let reg = RegisterData::from_bytes(reg_addr, &buf[i..i + index_step], resolution)?;
                 data.push(reg);
             }
             data
@@ -255,8 +254,8 @@ impl FrameBuilder {
     /// # }
     pub fn try_add_many(
         &mut self,
-        f: impl FnOnce(&mut Self) -> Result<(), crate::Error>,
-    ) -> Result<&mut Self, crate::Error> {
+        f: impl FnOnce(&mut Self) -> Result<(), crate::RegisterError>,
+    ) -> Result<&mut Self, crate::RegisterError> {
         f(self)?;
         Ok(self)
     }
@@ -328,7 +327,6 @@ mod tests {
     use super::*;
     use crate::protocol::registers;
     use crate::registers::{Faults, Readable, Writeable};
-
 
     #[test]
     fn test_write_u8_subframe() {

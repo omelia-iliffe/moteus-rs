@@ -32,11 +32,14 @@ mod bus;
 mod error;
 pub mod frame;
 mod protocol;
+mod transport;
 
 pub use bus::Controller;
 pub use error::*;
+#[cfg(feature = "fdcanusb")]
 pub use fdcanusb;
-#[cfg(feature = "serial2")]
+#[cfg(feature = "fdcanusb")]
 pub use fdcanusb::serial2;
+#[cfg(feature = "fdcanusb")]
 pub use fdcanusb::FdCanUSB;
 pub use protocol::{registers, Frame, FrameBuilder, Resolution, ResponseFrame};

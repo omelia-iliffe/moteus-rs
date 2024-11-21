@@ -3,7 +3,7 @@
 
 use crate::protocol::{Frame, FrameBuilder};
 use crate::registers::{Read, Readable, Write, Writeable};
-use crate::{registers, Error, Resolution};
+use crate::{registers, Resolution};
 
 /// Sets the mode to `registers::Modes::Stopped`.
 #[derive(Debug, Default, Clone)]
@@ -56,15 +56,6 @@ impl Position {
             position: Some(registers::CommandPosition::write(f32::NAN).expect("tested infallible")),
             ..Self::default()
         }
-    }
-
-    /// Use a closure to config the position frame.
-    pub fn configure<F>(mut self, f: F) -> Result<Self, Error>
-    where
-        F: FnOnce(&mut Self) -> Result<(), Error>,
-    {
-        f(&mut self)?;
-        Ok(self)
     }
 }
 
@@ -261,8 +252,8 @@ impl From<Query> for FrameBuilder {
 #[cfg(test)]
 mod tests {
     #![allow(clippy::unwrap_used)]
-    use fdcanusb::{CanFdFrame, FdCanUSB, FdCanUSBFrame};
     use super::*;
+    use fdcanusb::{CanFdFrame, FdCanUSB, FdCanUSBFrame};
 
     /// Will fail unless a motor is connected with id 1.
     #[test]
@@ -285,13 +276,25 @@ mod tests {
 
     #[test]
     fn test_query_parse() {
-
-
-        let recv: FdCanUSBFrame = "rcv 8001 01000A0E20000000BF000000000E2800000041000040401100130D1F011C0638505050\n".into();
+        let recv: FdCanUSBFrame =
+            "rcv 8001 01000A0E20000000BF000000000E2800000041000040401100130D1F011C0638505050\n"
+                .into();
         let frame = CanFdFrame::try_from(recv).unwrap();
         let frame: crate::ResponseFrame = frame.try_into().unwrap();
         dbg!(frame);
+    }
 
+    #[test]
+    fn test_parse() {
+        let recv: FdCanUSBFrame =
+            "rcv 0001 01000A0D20E5F21F3E0D2500007A440D270000C07F505050 b\n".into();
+        let frame = CanFdFrame::try_from(recv).unwrap();
+        let frame: crate::ResponseFrame = frame.try_into().unwrap();
+        dbg!(&frame);
+
+        dbg!(frame.get::<registers::Mode>().unwrap());
+        dbg!(frame.get::<registers::CommandPosition>().unwrap());
+        dbg!(frame.get::<registers::CommandTimeout>().unwrap());
     }
 
     #[test]

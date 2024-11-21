@@ -8,7 +8,7 @@ use moteus::frame::{Query, QueryType};
 use moteus::registers::*;
 use moteus::Controller;
 
-fn main() -> Result<(), moteus::Error> {
+fn main() -> Result<(), Box<dyn std::error::Error>> {
     env_logger::Builder::from_default_env().init();
 
     let qr = Query::new_with_extra([

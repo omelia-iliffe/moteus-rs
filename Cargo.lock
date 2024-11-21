@@ -161,9 +161,9 @@ dependencies = [
 
 [[package]]
 name = "fdcanusb"
-version = "0.6.2"
+version = "0.6.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2caf56bd3ec3fe45f69d31cd90962f4c92419894748a9bc8e93f0c21b9f1f677"
+checksum = "4461ae58e18ceaa7a347355cd704ace3e2e946a547215f7b50037427348607f6"
 dependencies = [
  "hex",
  "log",
@@ -334,9 +334,9 @@ checksum = "c08c74e62047bb2de4ff487b251e4a92e24f48745648451635cec7d591162d9f"
 
 [[package]]
 name = "serial2"
-version = "0.2.20"
+version = "0.2.26"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "532d7a51dc8416e952987dbd39dd5e24fb9d1cbe86f1263521ec5032cb7ff0fb"
+checksum = "f39915da34f43a64c66d53c228b8ba9a4e21fed4894af24304e47f96996acafd"
 dependencies = [
  "cfg-if",
  "libc",

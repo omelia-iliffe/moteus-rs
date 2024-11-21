@@ -1,3 +1,9 @@
+# Unreleased
+- **Major**: Added `Transport` trait to allow for different can interfaces. Currently only `FdCanUsb` is supported.
+- **Major**: Replaced `Serial2` feature with `FdCanUsb`
+- **Major**: `Bus` is now generic over `Transport`
+- **Major**: Removed `Position::configure` method
+- **Major**: `crate::Error` is generic over `Transport::Error`
 # Version 0.3.1 - 06-09-2024
 - **Minor**: Fixed `disable_brs` field not doing anything
 - **Minor**: Added feature `aux_index_raw` to read the custom aux_index_raw register, see my fork of the moteus firmware for more information.

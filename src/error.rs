@@ -2,17 +2,14 @@ use thiserror::Error;
 
 /// Errors that can occur when interacting with the Moteus.
 #[derive(Error, Debug)]
-pub enum Error {
-    /// IO errors occur when flushing the fdcanusb.
-    #[error(transparent)]
-    Io(#[from] std::io::Error),
+pub enum Error<T> {
     /// Transfer errors occur when reading or writing frames to the fdcanusb.
     #[error(transparent)]
-    TransportError(#[from] fdcanusb::TransferError),
+    Transport(T),
     /// Data overflow errors occur when the data is > 64 bytes.
     /// 64 bytes is the max frame length in the CAN FD protocol.
     #[error("data overflow error: {0}")]
-    InvalidFrameLength(#[from] fdcanusb::InvalidFrameLength),
+    InvalidFrameLength(usize),
     /// Frame errors occur when creating frames from an invalid combination of registers.
     #[error("frame error: {0}")]
     Frame(#[from] FrameError),

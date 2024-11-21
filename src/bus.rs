@@ -1,61 +1,59 @@
 use crate::error::Error;
 use crate::frame::QueryType;
 use crate::protocol::{Frame, FrameBuilder, ResponseFrame};
-use fdcanusb::{CanFdFrame, FdCanUSB};
+use crate::FrameParseError;
+use fdcanusb::CanFdFrame;
 
 /// The main struct for interacting with the Moteus.
-pub struct Controller<T>
-where
-    T: std::io::Write + std::io::Read,
-{
-    transport: FdCanUSB<T>,
+pub struct Controller<T> {
+    transport: T,
     default_query: FrameBuilder,
     /// Disable BRS (Bit Rate Switch) in the CAN FD frames. Useful if your CAN network is unable to perform.
     pub disable_brs: bool,
 }
 
-#[cfg(feature = "serial2")]
-impl Controller<fdcanusb::serial2::SerialPort> {
+#[cfg(feature = "fdcanusb")]
+impl Controller<fdcanusb::FdCanUSB<fdcanusb::serial2::SerialPort>> {
     /// Create a new [`Controller`] instance with a given transport.
     ///
     /// Currently, the transport is limited to [`FdCanUSB`].
     ///
     /// ```rust
-    /// #[cfg(feature = "serial2")]
+    /// # use fdcanusb::{FdCanUSB, serial2};
     /// # fn main() -> std::io::Result<()> {
-    /// moteus::Controller::new(moteus::FdCanUSB::open("/dev/fdcanusb", moteus::serial2::KeepSettings)?, false);
+    /// moteus::Controller::new(FdCanUSB::open("/dev/fdcanusb", serial2::KeepSettings)?, false);
     /// # Ok(())
     /// }
     /// ```
-    pub fn serial2(
+    pub fn fdcanusb(
         path: impl AsRef<std::path::Path>,
         serial_settings: impl fdcanusb::serial2::IntoSettings,
         disable_brs: bool,
     ) -> Result<Self, std::io::Error> {
         Ok(Self {
-            transport: FdCanUSB::open(path, serial_settings)?,
+            transport: fdcanusb::FdCanUSB::open(path, serial_settings)?,
             default_query: crate::frame::Query::default().into(),
             disable_brs,
         })
     }
 }
 
-impl<T> Controller<T>
+impl<T, F> Controller<T>
 where
-    T: std::io::Write + std::io::Read,
+    T: crate::transport::Transport<Frame = F>,
+    F: From<CanFdFrame> + TryInto<ResponseFrame, Error = FrameParseError>,
 {
     /// Create a new [`Controller`] instance with a given transport.
     ///
     /// Currently, the transport is limited to [`FdCanUSB`].
     ///
     /// ```rust
-    /// #[cfg(feature = "serial2")]
     /// # fn main() -> std::io::Result<()> {
     /// moteus::Controller::new(moteus::FdCanUSB::open("/dev/fdcanusb", moteus::serial2::KeepSettings)?, false);
     /// # Ok(())
-    /// }
+    /// # }
     /// ```
-    pub fn new(transport: FdCanUSB<T>, disable_brs: bool) -> Self {
+    pub fn new(transport: T, disable_brs: bool) -> Self {
         Self {
             transport,
             default_query: crate::frame::Query::default().into(),
@@ -64,12 +62,11 @@ where
     }
     /// Creates a new [`Controller`] instance with a custom default query.
     ///
-    /// todo: add example
     /// ```rust
     /// # use moteus::frame::Query;
     /// # use moteus::registers::*;
     /// # use moteus::Controller;
-    /// # fn main() -> Result<(), moteus::Error> {
+    /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
     /// let qr = Query::new_with_extra([
     ///     ControlPosition::read().into(),
     ///     ControlVelocity::read().into(),
@@ -84,10 +81,11 @@ where
     /// # Ok(())
     /// # }
     /// ```
-    pub fn with_query<F>(transport: FdCanUSB<T>, disable_brs: bool, default_query: F) -> Self
-    where
-        F: Into<FrameBuilder>,
-    {
+    pub fn with_query(
+        transport: T,
+        disable_brs: bool,
+        default_query: impl Into<FrameBuilder>,
+    ) -> Self {
         Controller {
             transport,
             default_query: default_query.into(),
@@ -101,7 +99,7 @@ where
     /// Use [`QueryType::Default`] to use the default query frame.
     /// Use [`QueryType::DefaultAnd`] to merge the default query frame with a custom query frame.
     /// Use [`QueryType::Custom`] to use a custom query frame (without the default).
-    pub fn query(&mut self, id: u8, query: QueryType) -> Result<ResponseFrame, Error> {
+    pub fn query(&mut self, id: u8, query: QueryType) -> Result<ResponseFrame, Error<T::Error>> {
         let frame = match query {
             QueryType::Default => self.default_query.clone().build(),
             QueryType::DefaultAnd(q_frame) => self.default_query.clone().merge(q_frame).build(),
@@ -112,11 +110,11 @@ where
 
     /// Send a single frame to the moteus. No response will be returned.
     /// Use [`Controller::send_with_query`] to get a response.
-    pub fn send_no_response<F: Into<FrameBuilder>>(
+    pub fn send_no_response(
         &mut self,
         id: u8,
-        frame: F,
-    ) -> Result<(), Error> {
+        frame: impl Into<FrameBuilder>,
+    ) -> Result<(), Error<T::Error>> {
         let frame = frame.into().build();
         self.transfer_single_no_response(id, frame)
     }
@@ -127,12 +125,12 @@ where
     /// Use [`QueryType::Default`] to use the default query frame.
     /// Use [`QueryType::DefaultAnd`] to merge the default query frame with a custom query frame.
     /// Use [`QueryType::Custom`] to use a custom query frame (without the default).
-    pub fn send_with_query<F: Into<FrameBuilder>>(
+    pub fn send_with_query(
         &mut self,
         id: u8,
-        frame: F,
+        frame: impl Into<FrameBuilder>,
         query: QueryType,
-    ) -> Result<ResponseFrame, Error> {
+    ) -> Result<ResponseFrame, Error<T::Error>> {
         let frame = match query {
             QueryType::Default => frame.into().merge(self.default_query.clone()).build(),
             QueryType::DefaultAnd(q_frame) => frame
@@ -145,10 +143,11 @@ where
         self.transfer_single_with_response(id, frame)
     }
 
-    fn transfer_single_no_response<F>(&mut self, id: u8, frame: F) -> Result<(), Error>
-    where
-        F: Into<Frame>,
-    {
+    fn transfer_single_no_response(
+        &mut self,
+        id: u8,
+        frame: impl Into<Frame>,
+    ) -> Result<(), Error<T::Error>> {
         let frame = frame.into();
         let arbitration_id = id as u16;
         let frame = CanFdFrame {
@@ -157,13 +156,14 @@ where
             brs: Some(!self.disable_brs),
             ..Default::default()
         };
-        let _ = self.transport.transfer_single(frame, false)?;
+        self.transport.transmit(frame.into())?;
         Ok(())
     }
-    fn transfer_single_with_response<F>(&mut self, id: u8, frame: F) -> Result<ResponseFrame, Error>
-    where
-        F: Into<Frame>,
-    {
+    fn transfer_single_with_response(
+        &mut self,
+        id: u8,
+        frame: impl Into<Frame>,
+    ) -> Result<ResponseFrame, Error<T::Error>> {
         let frame = frame.into();
         let arbitration_id = id as u16 | 0x8000;
         let frame = CanFdFrame {
@@ -172,8 +172,8 @@ where
             brs: Some(!self.disable_brs),
             ..Default::default()
         };
-        let response = self.transport.transfer_single(frame, true)?;
-        let response = response.ok_or(Error::NoResponse)?;
+        self.transport.transmit(frame.into())?;
+        let response = self.transport.receive()?;
         Ok(response.try_into()?)
     }
 }
