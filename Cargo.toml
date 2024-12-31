@@ -9,7 +9,7 @@ description = "Rust library for interfacing with Moteus controllers"
 
 [dependencies]
 hex = "0.4.3"
-fdcanusb = { version = "0.6.3"}
+fdcanusb = { version = "0.6.3", default-features = false, features = ["serial2"]}
 byteorder = "1.5.0"
 zerocopy = { version = "0.7.32", features = ["derive"] }
 num-traits = "0.2.18"
