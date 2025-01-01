@@ -177,44 +177,6 @@ where
     resolution: Resolution,
 }
 
-/// Response Data from the moteus board
-#[derive(Clone)]
-pub struct Res<R>
-where
-    R: Register,
-{
-    pub(crate) value: R::INNER,
-}
-
-impl<R> Res<R>
-where
-    R: Register,
-    R::INNER: Copy,
-{
-    /// Returns the value of the register
-    pub fn value(&self) -> R::INNER {
-        self.value
-    }
-}
-
-impl<R> PartialEq<Res<R>> for Res<R>
-where
-    R: Register,
-    R::INNER: PartialEq,
-{
-    fn eq(&self, other: &Res<R>) -> bool {
-        self.value == other.value
-    }
-}
-
-impl<R> Debug for Res<R>
-where
-    R: Register,
-{
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}({:?})", R::NAME, self.value)
-    }
-}
 
 /// A struct that represents the raw data (as `Vec<u8>`) that has been read from, or will be written to, a register
 #[derive(Clone, PartialEq, Eq, Hash)]
@@ -228,10 +190,9 @@ pub struct RegisterData {
 }
 
 impl RegisterData {
-    pub(crate) fn as_res<R: Register>(&self) -> Result<Res<R>, RegisterError> {
+    pub(crate) fn as_inner<R: Register>(&self) -> Result<R::INNER, RegisterError> {
         let bytes = self.data.as_ref().ok_or(RegisterError::NoData)?;
-        let value = R::from_bytes(bytes, self.resolution)?;
-        Ok(Res { value })
+        R::from_bytes(bytes, self.resolution)
     }
 
     pub(crate) fn from_bytes(
@@ -1169,7 +1130,7 @@ mod tests {
             resolution: Resolution::Float,
             data: Some([0, 0, 0, 64].into()),
         };
-        let data = reg.as_res::<Position>().unwrap();
+        let data = reg.as_inner::<Position>().unwrap();
         dbg!(&data);
     }
 }

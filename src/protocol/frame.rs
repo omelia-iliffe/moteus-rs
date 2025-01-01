@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use crate::error::FrameError;
 use crate::protocol::registers::{FrameRegisters, RegisterData};
-use crate::registers::{Register, RegisterAddr, Res};
+use crate::registers::{Register, RegisterAddr};
 use crate::{FrameParseError, Resolution};
 use fdcanusb::CanFdFrame;
 use itertools::Itertools;
@@ -142,12 +142,12 @@ impl ResponseFrame {
 
     /// Get a register from the response frame
     /// If the register `R` is not found in the response frame [`None`] is returned.
-    pub fn get<R: Register>(&self) -> Option<Res<R>> {
+    pub fn get<R: Register>(&self) -> Option<R::INNER> {
         let register = R::address();
         self.0
             .iter()
             .find(|reg| reg.address == register)
-            .and_then(|reg| reg.as_res::<R>().ok())
+            .and_then(|reg| reg.as_inner::<R>().ok())
     }
 
     /// Get many registers from the response frame
@@ -481,12 +481,10 @@ mod tests {
         let frame = ResponseFrame::from_bytes(&buf).expect("Failed to parse response frame");
         assert_eq!(
             frame.get::<registers::Mode>().unwrap(),
-            Res::<registers::Mode> {
-                value: registers::Modes::Position,
-            }
+            registers::Modes::Position
         ); // type returned from frame.get() is inferred.
         assert_eq!(
-            frame.get::<registers::CommandPosition>().map(|r| r.value()),
+            frame.get::<registers::CommandPosition>(),
             Some(1.0)
         ); //use the turbofish syntax when the type cannot be inferred.
     }
