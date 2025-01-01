@@ -11,7 +11,7 @@ use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
 use std::fmt::Debug;
 use std::marker::PhantomData;
-use zerocopy::AsBytes;
+use zerocopy::IntoBytes;
 
 /// Used to define a register with Integers as the representation
 macro_rules! int_rw_register {
@@ -310,7 +310,7 @@ pub(crate) const CURRENT_MAP: Map = (1.0, 0.1, 0.001);
 ///
 /// The number of values can be encoded into the 2 Least Significant bits of the [`FrameRegisters`]
 #[allow(missing_docs)]
-#[derive(Debug, Clone, Copy, FromPrimitive, PartialEq, Eq, AsBytes, Hash)]
+#[derive(Debug, Clone, Copy, FromPrimitive, PartialEq, Eq, IntoBytes, Hash)]
 #[repr(u8)]
 pub enum FrameRegisters {
     WriteInt8 = 0x00,
@@ -364,7 +364,7 @@ impl FrameRegisters {
 }
 
 /// Each register of the moteus board has an address which can be encoded as a [`Varuint`]
-#[derive(Debug, Clone, Copy, AsBytes, FromPrimitive, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, IntoBytes, FromPrimitive, PartialEq, Eq, Hash)]
 #[allow(missing_docs)]
 #[repr(u16)]
 pub enum RegisterAddr {
@@ -833,7 +833,7 @@ where
 }
 
 #[allow(missing_docs)]
-#[derive(Debug, Clone, Copy, AsBytes, FromPrimitive, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, IntoBytes, FromPrimitive, PartialEq, Eq)]
 #[repr(u8)]
 pub enum Modes {
     Stopped = 0,
@@ -888,7 +888,7 @@ impl TryFromBytes for Modes {
     }
 }
 
-#[derive(Debug, Clone, Copy, AsBytes, FromPrimitive, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, IntoBytes, FromPrimitive, PartialEq, Eq)]
 #[repr(u8)]
 #[allow(missing_docs)]
 pub enum Faults {
@@ -953,7 +953,7 @@ impl TryFromBytes for Faults {
     }
 }
 
-#[derive(Debug, Clone, Copy, AsBytes, FromPrimitive, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, IntoBytes, FromPrimitive, PartialEq, Eq)]
 #[repr(u8)]
 #[allow(missing_docs)]
 pub enum HomeStates {
