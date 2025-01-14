@@ -275,19 +275,11 @@ trait TryIntoBytes {
     fn try_into_f32_bytes(self) -> Result<[u8; 4], RegisterError>;
 }
 
-trait TryFromBytes {
-    fn try_from_1_byte(byte: u8, scale: f32) -> Result<Self, RegisterError>
-    where
-        Self: Sized;
-    fn try_from_2_bytes(bytes: &[u8], scale: f32) -> Result<Self, RegisterError>
-    where
-        Self: Sized;
-    fn try_from_4_bytes(bytes: &[u8], scale: f32) -> Result<Self, RegisterError>
-    where
-        Self: Sized;
-    fn try_from_f32_bytes(bytes: &[u8]) -> Result<Self, RegisterError>
-    where
-        Self: Sized;
+trait TryFromBytes: Sized {
+    fn try_from_1_byte(byte: u8, scale: f32) -> Result<Self, RegisterError>;
+    fn try_from_2_bytes(bytes: &[u8], scale: f32) -> Result<Self, RegisterError>;
+    fn try_from_4_bytes(bytes: &[u8], scale: f32) -> Result<Self, RegisterError>;
+    fn try_from_f32_bytes(bytes: &[u8]) -> Result<Self, RegisterError>;
 }
 
 pub(crate) type Map = (f32, f32, f32);
