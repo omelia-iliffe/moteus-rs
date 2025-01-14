@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use crate::error::FrameError;
 use crate::protocol::registers::{FrameRegisters, RegisterData};
 use crate::registers::{Register, RegisterAddr};
-use crate::{FrameParseError, Resolution};
+use crate::FrameParseError;
 use fdcanusb::CanFdFrame;
 use itertools::Itertools;
 use num_traits::FromPrimitive;
@@ -217,24 +217,12 @@ impl Frame {
 /// Registers can be added in any order, and the builder will sort them into subframes.
 /// Multiple [`FrameBuilder`]s can be merged together.
 /// Duplicate registers are overwritten without warning.
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone, Default)]
 pub struct FrameBuilder {
     registers: HashMap<FrameRegisters, HashMap<RegisterAddr, RegisterData>>,
 }
 
 impl FrameBuilder {
-    fn frame_register(resolution: Resolution, read: bool) -> FrameRegisters {
-        match (resolution, read) {
-            (Resolution::Int8, true) => FrameRegisters::ReadInt8,
-            (Resolution::Int16, true) => FrameRegisters::ReadInt16,
-            (Resolution::Int32, true) => FrameRegisters::ReadInt32,
-            (Resolution::Float, true) => FrameRegisters::ReadF32,
-            (Resolution::Int8, false) => FrameRegisters::WriteInt8,
-            (Resolution::Int16, false) => FrameRegisters::WriteInt16,
-            (Resolution::Int32, false) => FrameRegisters::WriteInt32,
-            (Resolution::Float, false) => FrameRegisters::WriteF32,
-        }
-    }
 
     /// Use a closure that returns [`crate::Error`] to add multiple registers to the frame. Used when constructing write registers.
     ///
@@ -263,7 +251,7 @@ impl FrameBuilder {
     /// Add a single register to the frame
     pub fn add(&mut self, reg: impl Into<RegisterData>) -> &mut Self {
         let reg = reg.into();
-        let r = FrameBuilder::frame_register(reg.resolution, reg.data.is_none());
+        let r = FrameRegisters::from_resolution(reg.resolution, reg.data.is_none());
         let _ = self
             .registers
             .entry(r)
@@ -327,6 +315,7 @@ mod tests {
     use super::*;
     use crate::protocol::registers;
     use crate::registers::{Faults, Readable, Writeable};
+    use crate::Resolution;
 
     #[test]
     fn test_write_u8_subframe() {
@@ -458,8 +447,8 @@ mod tests {
                     registers::Modes::Position,
                     Resolution::Int16,
                 )
-                .unwrap()
-                .into(),
+                    .unwrap()
+                    .into(),
                 registers::Position::write_with_resolution(0.01, Resolution::Int16)
                     .unwrap()
                     .into(),

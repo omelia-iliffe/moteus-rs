@@ -361,6 +361,20 @@ impl FrameRegisters {
         };
         Some(r)
     }
+
+    /// Return the FrameRegister from [`Resolution`] and if its read or write
+    pub const fn from_resolution(resolution: Resolution, read: bool) -> Self {
+        match (resolution, read) {
+            (Resolution::Int8, true) => FrameRegisters::ReadInt8,
+            (Resolution::Int16, true) => FrameRegisters::ReadInt16,
+            (Resolution::Int32, true) => FrameRegisters::ReadInt32,
+            (Resolution::Float, true) => FrameRegisters::ReadF32,
+            (Resolution::Int8, false) => FrameRegisters::WriteInt8,
+            (Resolution::Int16, false) => FrameRegisters::WriteInt16,
+            (Resolution::Int32, false) => FrameRegisters::WriteInt32,
+            (Resolution::Float, false) => FrameRegisters::WriteF32,
+        }
+    }
 }
 
 /// Each register of the moteus board has an address which can be encoded as a [`Varuint`]
