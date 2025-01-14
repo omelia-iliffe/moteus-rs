@@ -29,8 +29,7 @@ impl SubFrame {
             if (prev_reg.address as u16) + 1 != register.address as u16 {
                 return Err(FrameError::NonSequentialRegisters);
             }
-            // TODO: this code does nothing? Im not sure what happened here. Impl a check to see if the register is read or write.
-            if register.data.is_none() != register.data.is_none() {
+            if prev_reg.data.is_none() != register.data.is_none() {
                 return Err(FrameError::MixedReadWrites);
             }
         }
