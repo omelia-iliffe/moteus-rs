@@ -259,8 +259,7 @@ mod tests {
     #[test]
     fn test_query() {
         let mut c = crate::Controller::new(
-            FdCanUSB::open("/dev/fdcanusb")
-                .expect("Couldn't open fdcanusb at /dev/fdcanusb"),
+            FdCanUSB::open("/dev/fdcanusb").expect("Couldn't open fdcanusb at /dev/fdcanusb"),
             false,
         );
         let _ = c.query(1, QueryType::Default);

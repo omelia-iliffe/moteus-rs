@@ -222,7 +222,6 @@ pub struct FrameBuilder {
 }
 
 impl FrameBuilder {
-
     /// Use a closure that returns [`crate::Error`] to add multiple registers to the frame. Used when constructing write registers.
     ///
     /// ### Example
@@ -446,8 +445,8 @@ mod tests {
                     registers::Modes::Position,
                     Resolution::Int16,
                 )
-                    .unwrap()
-                    .into(),
+                .unwrap()
+                .into(),
                 registers::Position::write_with_resolution(0.01, Resolution::Int16)
                     .unwrap()
                     .into(),
@@ -471,10 +470,7 @@ mod tests {
             frame.get::<registers::Mode>().unwrap(),
             registers::Modes::Position
         ); // type returned from frame.get() is inferred.
-        assert_eq!(
-            frame.get::<registers::CommandPosition>(),
-            Some(1.0)
-        ); //use the turbofish syntax when the type cannot be inferred.
+        assert_eq!(frame.get::<registers::CommandPosition>(), Some(1.0)); //use the turbofish syntax when the type cannot be inferred.
     }
 
     #[test]

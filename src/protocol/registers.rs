@@ -177,7 +177,6 @@ where
     resolution: Resolution,
 }
 
-
 /// A struct that represents the raw data (as `Vec<u8>`) that has been read from, or will be written to, a register
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub struct RegisterData {

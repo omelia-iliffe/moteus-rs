@@ -20,8 +20,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         ControlTorqueError::read().into(),
     ]);
 
-    let mut transport =
-        fdcanusb::FdCanUSB::open("/dev/fdcanusb").unwrap();
+    let mut transport = fdcanusb::FdCanUSB::open("/dev/fdcanusb").unwrap();
     transport.flush()?;
     let mut c = Controller::with_query(transport, false, qr);
     // In case the controller had faulted previously, at the start of

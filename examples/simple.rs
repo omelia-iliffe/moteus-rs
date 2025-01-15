@@ -12,10 +12,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     env_logger::Builder::from_default_env().init();
     // By default, the Controller connects to id 1, and picks an arbitrary
     // CAN-FD transport, prefering an attached fdcanusb if available.
-    let mut c = crate::Controller::new(
-        FdCanUSB::open("/dev/fdcanusb")?,
-        false,
-    );
+    let mut c = crate::Controller::new(FdCanUSB::open("/dev/fdcanusb")?, false);
     // In case the controller had faulted previously, at the start of
     // this script we send the stop command to clear it.
     c.send_no_response(1, moteus::frame::Stop)?;
