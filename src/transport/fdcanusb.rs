@@ -2,7 +2,7 @@ use crate::transport::Transport;
 use crate::Error;
 use fdcanusb::FdCanUSB;
 
-impl Transport for FdCanUSB<fdcanusb::serial2::SerialPort> {
+impl Transport for FdCanUSB {
     type Error = fdcanusb::TransferError;
     type Frame = fdcanusb::CanFdFrame;
 

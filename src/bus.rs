@@ -13,7 +13,7 @@ pub struct Controller<T> {
 }
 
 #[cfg(feature = "fdcanusb")]
-impl Controller<fdcanusb::FdCanUSB<fdcanusb::serial2::SerialPort>> {
+impl Controller<fdcanusb::FdCanUSB> {
     /// Create a new [`Controller`] instance with a given transport.
     ///
     /// Currently, the transport is limited to [`FdCanUSB`].
@@ -21,17 +21,16 @@ impl Controller<fdcanusb::FdCanUSB<fdcanusb::serial2::SerialPort>> {
     /// ```rust
     /// # use fdcanusb::{FdCanUSB, serial2};
     /// # fn main() -> std::io::Result<()> {
-    /// moteus::Controller::new(FdCanUSB::open("/dev/fdcanusb", serial2::KeepSettings)?, false);
+    /// moteus::Controller::new(FdCanUSB::open("/dev/fdcanusb")?, false);
     /// # Ok(())
     /// }
     /// ```
     pub fn fdcanusb(
         path: impl AsRef<std::path::Path>,
-        serial_settings: impl fdcanusb::serial2::IntoSettings,
         disable_brs: bool,
     ) -> Result<Self, std::io::Error> {
         Ok(Self {
-            transport: fdcanusb::FdCanUSB::open(path, serial_settings)?,
+            transport: fdcanusb::FdCanUSB::open(path)?,
             default_query: crate::frame::Query::default().into(),
             disable_brs,
         })
@@ -49,7 +48,7 @@ where
     ///
     /// ```rust
     /// # fn main() -> std::io::Result<()> {
-    /// moteus::Controller::new(moteus::FdCanUSB::open("/dev/fdcanusb", moteus::serial2::KeepSettings)?, false);
+    /// moteus::Controller::new(moteus::FdCanUSB::open("/dev/fdcanusb")?, false);
     /// # Ok(())
     /// # }
     /// ```
@@ -75,7 +74,7 @@ where
     ///     ControlVelocityError::read().into(),
     ///     ControlTorqueError::read().into(),
     /// ]);
-    /// let mut transport = fdcanusb::FdCanUSB::open("/dev/fdcanusb", fdcanusb::serial2::KeepSettings)?;
+    /// let mut transport = fdcanusb::FdCanUSB::open("/dev/fdcanusb")?;
     /// transport.flush()?;
     /// let mut c = Controller::with_query(transport, false, qr);
     /// # Ok(())

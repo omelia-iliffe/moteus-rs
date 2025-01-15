@@ -13,7 +13,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // By default, the Controller connects to id 1, and picks an arbitrary
     // CAN-FD transport, prefering an attached fdcanusb if available.
     let mut c = crate::Controller::new(
-        FdCanUSB::open("/dev/fdcanusb", fdcanusb::serial2::KeepSettings)?,
+        FdCanUSB::open("/dev/fdcanusb")?,
         false,
     );
     // In case the controller had faulted previously, at the start of

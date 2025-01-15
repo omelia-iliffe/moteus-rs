@@ -259,7 +259,7 @@ mod tests {
     #[test]
     fn test_query() {
         let mut c = crate::Controller::new(
-            FdCanUSB::open("/dev/fdcanusb", fdcanusb::serial2::KeepSettings)
+            FdCanUSB::open("/dev/fdcanusb")
                 .expect("Couldn't open fdcanusb at /dev/fdcanusb"),
             false,
         );
