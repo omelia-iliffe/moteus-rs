@@ -187,7 +187,7 @@ checksum = "523dc4f511e55ab87b694dc30d0f820d60906ef06413f93d4d7a1385599cc149"
 
 [[package]]
 name = "moteus"
-version = "0.3.1"
+version = "0.4.0"
 dependencies = [
  "byteorder",
  "env_logger",

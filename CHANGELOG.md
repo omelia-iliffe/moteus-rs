@@ -1,5 +1,7 @@
-# Unreleased
-- **Major**: Added `Transport` trait to allow for different can interfaces. Currently only `FdCanUsb` is supported.
+# Version 0.4.0 - 15-01-2025
+- **Major**: removed `Res` wrapper instead returning the `Register::INNER` type
+- **Major**: Updated `FdCanUsb` to 0.7.0
+- **Major**: Added `Transport` trait to allow for different can interface. Currently only `FdCanUsb` is supported.
 - **Major**: Replaced `Serial2` feature with `FdCanUsb`
 - **Major**: `Bus` is now generic over `Transport`
 - **Major**: Removed `Position::configure` method
